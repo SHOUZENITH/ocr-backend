@@ -19,7 +19,7 @@ app.add_middleware(
 
 @app.get("/")
 def home():
-    return {"status": "Vines OCR API is Live"}
+    return {"status": "OCR API is Live"}
 
 @app.post("/process-ocr")
 async def process_ocr(file: UploadFile = File(...)):
