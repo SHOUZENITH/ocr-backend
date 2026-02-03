@@ -18,12 +18,13 @@ app.add_middleware(
 
 @app.get("/")
 def home():
-    return {"status": "Vines OCR API is Live (RGBA Fix)"}
+    return {"status": "OCR API is Live"}
 
 @app.post("/process-ocr")
 async def process_ocr(file: UploadFile = File(...)):
     content = await file.read()
     
+    # FIX: Ensure image is RGB (removes Alpha channel if PNG)
     img = Image.open(io.BytesIO(content)).convert("RGB")
     
     img_np = np.array(img)
