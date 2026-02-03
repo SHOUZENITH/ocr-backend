@@ -12,11 +12,9 @@ from supabase import create_client, Client
 
 app = FastAPI()
 
-# --- 1. CONFIGURATION ---
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")
 
-# Initialize Supabase
 supabase: Client = None
 if SUPABASE_URL and SUPABASE_KEY:
     try:
@@ -25,7 +23,6 @@ if SUPABASE_URL and SUPABASE_KEY:
     except Exception as e:
         print(f"❌ Supabase Connection Failed: {e}")
 
-# CORS Config (Open for testing, restrict for production)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,39 +30,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- 2. ADVANCED LOGIC ENGINE ---
-
 def parse_size_to_gb(value_str, unit_str="GB"):
-    """
-    Converts "500 MB", "2.5 GB", "1024 KB" to a float GB value.
-    """
     try:
         val = float(value_str.replace(',', '.'))
         unit = unit_str.upper().strip()
-        
-        if "MB" in unit:
-            return val / 1024.0
-        elif "KB" in unit:
-            return val / (1024.0 * 1024.0)
-        return val # Default is GB
+        if "MB" in unit: return val / 1024.0
+        elif "KB" in unit: return val / (1024.0 * 1024.0)
+        return val
     except ValueError:
         return 0.0
 
 def calculate_usage_from_text(text):
-    """
-    The 'Smart Sisa' Engine.
-    Prioritizes slash patterns (Remaining/Total) and 'Sisa' keywords.
-    """
     clean_text = text.lower().replace(',', '.')
     
-    # Includes common OCR typos for "Sisa" (Slsa, S1sa)
-    sisa_keywords = ['sisa', 'slsa', 's1sa', 'rem', 'left', 'kuota']
+    is_remaining_context = False
+    if re.search(r's[i1l]sa|rem|left|kuota', clean_text):
+        is_remaining_context = True
     
     total_used = 0.0
     total_remaining = 0.0
     
-    # Most accurate. Logic: If N1 < N2, then N1 is Remaining.
-    slash_pattern = r'(\d+(?:\.\d+)?)\s*(?:gb|mb)?\s*[\/|]\s*(\d+(?:\.\d+)?)\s*(?:gb|mb)'
+    slash_pattern = r'(\d+(?:\.\d+)?)\s*(?:gb|mb)?\s*[\\\/|1lI]\s*(\d+(?:\.\d+)?)\s*(?:gb|mb)'
     slash_matches = re.findall(slash_pattern, clean_text)
     
     if slash_matches:
@@ -75,105 +60,97 @@ def calculate_usage_from_text(text):
                 n1 = float(val1)
                 n2 = float(val2)
                 
-                # Sanity Check: Total (n2) must be bigger than Remaining (n1)
-                # And ignore years (e.g. 2026)
                 if n1 < n2 and n2 < 2000:
                     used = n2 - n1
                     total_used += used
                     total_remaining += n1
                     valid_pair = True
-            except:
-                continue
+            except: continue
         
         if valid_pair:
             return round(total_used, 2), round(total_remaining, 2), "Strategy 1 (Slash Pairs)"
 
-    # Looks for "Terpakai: 5 GB"
     used_pattern = r'(?:terpakai|used|pemakaian|usage).*?(\d+(?:\.\d+)?)\s*(gb|mb)'
     used_matches = re.findall(used_pattern, clean_text)
     if used_matches:
         explicit_used = 0.0
         for val, unit in used_matches:
             explicit_used += parse_size_to_gb(val, unit)
-        
         if explicit_used > 0:
             return round(explicit_used, 2), 0.0, "Strategy 2 (Explicit Used)"
 
-    # Looks for any GB/MB numbers
     gb_pattern = r'(\d+(?:\.\d+)?)\s*(?:gb|mb)'
     matches = re.findall(gb_pattern, clean_text)
     
-    # Filter out years (like 2026) and tiny noise
     values = []
     for m in matches:
         try:
             v = float(m)
-            if v < 2000: values.append(v)
+            if v < 2000 and v > 0.01: values.append(v)
         except: pass
         
     if not values:
         return 0.0, 0.0, "No Data Found"
 
-
-    has_sisa = any(k in clean_text for k in sisa_keywords)
-
     if len(values) >= 2:
-        # Multiple numbers: Assume Max is Total, Min is Remaining
         total = max(values)
         rem = min(values)
         used = total - rem
-        return round(used, 2), round(rem, 2), f"Strategy 3 (Max-Min)"
+        return round(used, 2), round(rem, 2), "Strategy 3 (Max-Min)"
     
     elif len(values) == 1:
         val = values[0]
-        if has_sisa:
-            # We found "Sisa 37.41 GB". Used is unknown (set to 0 for user to fill), NOT 37.41.
-            return 0.0, round(val, 2), "Strategy 3 (Single Remaining)"
+        if is_remaining_context:
+            return 0.0, round(val, 2), "Strategy 3 (Single Remaining - Safety)"
         else:
-            # Only assume Usage if no "Sisa" keyword exists
             return round(val, 2), 0.0, "Strategy 3 (Single Usage)"
 
     return 0.0, 0.0, "Failed"
 
-# --- 3. ENDPOINTS ---
-
 @app.get("/")
 def home():
-    return {"status": "OCR Service Operational", "logic": "Smart Sisa Detection"}
+    return {"status": "OCR Service Operational", "mode": "Adaptive Threshold"}
 
 @app.post("/preview-ocr")
 async def preview_ocr(
     file: UploadFile = File(...),
     content_length: int = Header(None)
 ):
-    """
-    Step 1: Analyzes image and tells Frontend what it sees.
-    Does NOT save to database yet.
-    """
     if content_length and content_length > 5 * 1024 * 1024:
         raise HTTPException(413, "File too large (Max 5MB)")
 
     content = await file.read()
     
-    # Image Pre-processing
     try:
         img = Image.open(io.BytesIO(content)).convert("RGB")
         img_np = np.array(img)
+        
         gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
-        gray = cv2.equalizeHist(gray) # Contrast boost
-        _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
         
-        # OCR
-        text = pytesseract.image_to_string(thresh, config="--psm 6")
+        adaptive = cv2.adaptiveThreshold(
+            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+            cv2.THRESH_BINARY, 31, 2
+        )
         
-        # Logic
-        used, remaining, method = calculate_usage_from_text(text)
+        inverted = cv2.bitwise_not(adaptive)
+        
+        gray_eq = cv2.equalizeHist(gray)
+        _, standard = cv2.threshold(gray_eq, 150, 255, cv2.THRESH_BINARY)
+        
+        config = "--psm 6"
+        t1 = pytesseract.image_to_string(adaptive, config=config)
+        t2 = pytesseract.image_to_string(inverted, config=config)
+        t3 = pytesseract.image_to_string(standard, config=config)
+        
+        combined_text = t1 + " \n " + t2 + " \n " + t3
+        
+        used, remaining, method = calculate_usage_from_text(combined_text)
         
         return {
             "used": used,
             "remaining": remaining,
             "debug_method": method,
-            "debug_text": text[:100]
+            "debug_text": combined_text[:200]
         }
     except Exception as e:
         return {"error": str(e), "used": 0, "remaining": 0}
@@ -185,31 +162,24 @@ async def submit_report(
     outlet_name_manual: str = Form(None),
     user_corrected_usage: float = Form(...)
 ):
-    """
-    Step 2: Securely saves the report.
-    """
-    if not supabase:
-        raise HTTPException(500, "Database Not Configured")
+    if not supabase: raise HTTPException(500, "Database Not Configured")
 
     content = await file.read()
     
-    # 1. Audit Check (Silent Re-Run)
     try:
         img = Image.open(io.BytesIO(content)).convert("RGB")
         img_np = np.array(img)
         gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
-        gray = cv2.equalizeHist(gray)
-        _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
-        text = pytesseract.image_to_string(thresh, config="--psm 6")
+        adaptive = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 2)
+        text = pytesseract.image_to_string(adaptive)
         audit_used, _, _ = calculate_usage_from_text(text)
     except:
         audit_used = 0.0
 
-    # 2. Upload to Storage
     try:
         filename = f"{int(time.time())}_{file.filename.replace(' ', '_')}"
         folder = outlet_name_manual if outlet_name_manual else (outlet_id or "Unsorted")
-        clean_folder = re.sub(r'[^a-zA-Z0-9_-]', '', folder) # Sanitize
+        clean_folder = re.sub(r'[^a-zA-Z0-9_-]', '', folder)
         storage_path = f"{clean_folder}/{filename}"
         
         supabase.storage.from_("Screenshots").upload(
@@ -218,23 +188,21 @@ async def submit_report(
             file_options={"content-type": file.content_type}
         )
     except Exception as e:
-        print(f"Storage Upload Failed: {e}")
+        print(f"Storage Error: {e}")
         storage_path = "error_upload_failed.jpg"
 
-    # 3. Save to Database
     try:
         data_payload = {
             "outlet_id": outlet_id if outlet_id != "OTHER" else None,
             "outlet_name_manual": outlet_name_manual,
             "week": f"Week {time.strftime('%U')}",
-            "ocr_used_gb": audit_used,            # Audit Trail
-            "final_used_gb": user_corrected_usage, # Billing Amount
+            "ocr_used_gb": audit_used,
+            "final_used_gb": user_corrected_usage,
             "verified": True,
             "image_url": storage_path
         }
         
         supabase.table("quota_reports").insert(data_payload).execute()
-        
         return {"status": "success", "data": data_payload}
         
     except Exception as e:
