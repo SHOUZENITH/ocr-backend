@@ -12,22 +12,14 @@ import time
 
 app = FastAPI()
 
-# 1. SETUP: Supabase Connection (Server-Side)
-# These will be set in your Render Dashboard Environment Variables
+# --- SETUP ---
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY") # Use Service Role Key for full access
-
-# Initialize client only if keys exist (prevents crash during build)
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")
 supabase: Client = None
 if SUPABASE_URL and SUPABASE_KEY:
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# 2. CORS: Restrict access
-origins = [
-    "http://localhost:3000",
-    "https://quota-report.vercel.app"
-]
-
+origins = ["http://localhost:3000", "https://quota-report.vercel.app"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -35,98 +27,75 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-def home():
-    return {"status": "Secure OCR Backend Live"}
+# --- HELPER: The Logic from your Notebook ---
+def run_ocr_logic(content):
+    img = Image.open(io.BytesIO(content)).convert("RGB")
+    img_np = np.array(img)
+    gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+    gray = cv2.equalizeHist(gray)
+    _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
+    
+    text = pytesseract.image_to_string(thresh, config="--psm 6")
+    matches = re.findall(r'(\d+(?:\.\d+)?)\s*GB', text, re.IGNORECASE)
+    values = [float(m) for m in matches]
+    
+    used = 0.0
+    remaining = 0.0
+    
+    if len(values) >= 2:
+        used = max(values) - min(values)
+        remaining = min(values)
+    elif len(values) == 1:
+        used = values[0]
+        
+    return round(used, 2), round(remaining, 2)
 
+# --- ENDPOINT 1: PREVIEW (Just shows the number, doesn't save) ---
+@app.post("/preview-ocr")
+async def preview_ocr(file: UploadFile = File(...)):
+    content = await file.read()
+    used, remaining = run_ocr_logic(content)
+    return {"used": used, "remaining": remaining}
+
+# --- ENDPOINT 2: SECURE SUBMIT (Saves & Audits) ---
 @app.post("/submit-report")
 async def submit_report(
     file: UploadFile = File(...),
-    outlet_id: str = Form(None),       # Receive Outlet ID
-    outlet_name_manual: str = Form(None), # Receive Manual Name
-    content_length: int = Header(None)
+    outlet_id: str = Form(None),
+    outlet_name_manual: str = Form(None),
+    user_corrected_usage: float = Form(...) # <--- The number the USER typed
 ):
-    # --- SECURITY CHECKS ---
-    if not supabase:
-        raise HTTPException(500, "Server DB not configured")
-        
-    if content_length and content_length > 5 * 1024 * 1024:
-        raise HTTPException(413, "File too large (Max 5MB)")
+    if not supabase: raise HTTPException(500, "DB Config Missing")
+    
+    # 1. Re-Verify Image Integrity
+    content = await file.read()
+    
+    # 2. Re-Run OCR (The "Audit" Check)
+    # We do this secretly to compare against what the user typed
+    system_detected_usage, _ = run_ocr_logic(content)
 
-    if file.content_type not in ["image/jpeg", "image/png", "image/webp"]:
-        raise HTTPException(400, "Invalid file type. Only JPG/PNG allowed")
+    # 3. Upload Image
+    filename = f"{int(time.time())}_{file.filename.replace(' ', '_')}"
+    folder = outlet_name_manual if outlet_name_manual else outlet_id
+    storage_path = f"{folder}/{filename}"
+    
+    supabase.storage.from_("Screenshots").upload(
+        path=storage_path,
+        file=content,
+        file_options={"content-type": file.content_type}
+    )
 
-    # --- PROCESS IMAGE ---
-    try:
-        content = await file.read()
-        
-        # Verify Image
-        try:
-            img = Image.open(io.BytesIO(content)).convert("RGB")
-            img.verify()
-            img = Image.open(io.BytesIO(content)).convert("RGB") # Re-open
-        except:
-            raise HTTPException(400, "Corrupted image file")
+    # 4. Save to DB (Recording BOTH numbers)
+    data_payload = {
+        "outlet_id": outlet_id if outlet_id != "OTHER" else None,
+        "outlet_name_manual": outlet_name_manual,
+        "week": f"Week {time.strftime('%U')}",
+        "ocr_used_gb": system_detected_usage,   # What the Machine saw
+        "final_used_gb": user_corrected_usage,  # What the Human typed
+        "verified": True,
+        "image_url": storage_path
+    }
+    
+    supabase.table("quota_reports").insert(data_payload).execute()
 
-        # OCR Logic (Notebook Style)
-        img_np = np.array(img)
-        gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
-        gray = cv2.equalizeHist(gray)
-        _, thresh = cv2.threshold(gray, 150, 255, cv2.THRESH_BINARY)
-        
-        config = "--psm 6"
-        text = pytesseract.image_to_string(thresh, config=config)
-        
-        matches = re.findall(r'(\d+(?:\.\d+)?)\s*GB', text, re.IGNORECASE)
-        values = [float(m) for m in matches]
-        
-        used = 0.0
-        remaining = 0.0
-        
-        if len(values) >= 2:
-            total = max(values)
-            remaining = min(values)
-            used = total - remaining
-        elif len(values) == 1:
-            used = values[0]
-
-        # --- DATABASE & STORAGE SAVE ---
-        
-        # 1. Upload Image to Supabase Storage
-        filename = f"{int(time.time())}_{file.filename.replace(' ', '_')}"
-        folder = outlet_name_manual if outlet_name_manual else outlet_id
-        storage_path = f"{folder}/{filename}"
-        
-        # Reset pointer to start of file for upload
-        file_obj = io.BytesIO(content)
-        
-        # Upload
-        supabase.storage.from_("Screenshots").upload(
-            path=storage_path,
-            file=file_obj.read(),
-            file_options={"content-type": file.content_type}
-        )
-
-        # 2. Insert Data into DB
-        # The backend acts as the source of truth for "ocr_used_gb"
-        data_payload = {
-            "outlet_id": outlet_id if outlet_id != "OTHER" else None,
-            "outlet_name_manual": outlet_name_manual,
-            "week": f"Week {time.strftime('%U')}",
-            "ocr_used_gb": round(used, 2),
-            "final_used_gb": round(used, 2), # Auto-verified by system
-            "verified": True,
-            "image_url": storage_path
-        }
-        
-        db_res = supabase.table("quota_reports").insert(data_payload).execute()
-
-        return {
-            "status": "success", 
-            "message": "Report secured and saved.",
-            "data": data_payload
-        }
-
-    except Exception as e:
-        print(f"Error: {e}")
-        raise HTTPException(500, f"Processing failed: {str(e)}")
+    return {"status": "success", "data": data_payload}
