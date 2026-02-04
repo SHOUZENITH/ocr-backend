@@ -12,7 +12,6 @@ from supabase import create_client, Client
 
 app = FastAPI()
 
-# --- 1. CONFIGURATION ---
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")
 
@@ -31,10 +30,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- 2. LOGIC ENGINE ---
-
 def parse_size_to_gb(value_str, unit_str="GB"):
-    """Converts MB/KB strings to GB floats."""
     try:
         val = float(value_str.replace(',', '.'))
         unit = unit_str.upper().strip()
@@ -45,34 +41,34 @@ def parse_size_to_gb(value_str, unit_str="GB"):
         return 0.0
 
 def calculate_usage_from_text(text):
-    """
-    Analyzes text to find data usage.
-    Returns: (used_gb, remaining_gb, detection_method)
-    """
     clean_text = text.lower().replace(',', '.')
     
-    # Context Check: Is this describing remaining data?
     is_remaining_context = bool(re.search(r's[i1l]sa|rem|left|kuota|bal', clean_text))
 
-    # STRATEGY 1: SLASH PATTERN (Highest Confidence)
-    # Looks for: "21.98 GB / 28 GB"
     slash_pattern = r'(\d+(?:\.\d+)?)\s*(?:gb|mb)?\s*[\\\/|1lI]\s*(\d+(?:\.\d+)?)\s*(?:gb|mb)'
     slash_matches = re.findall(slash_pattern, clean_text)
     
+    valid_candidates = []
+
     if slash_matches:
         for val1, val2 in slash_matches:
             try:
                 n1 = float(val1)
                 n2 = float(val2)
-                # n1 is usually Remaining, n2 is Total. 
-                # Constraint: Total must be realistic (< 2000 GB)
-                if n1 < n2 and n2 < 2000:
+                
+                if n1 <= n2 and n2 < 2000:
                     used = n2 - n1
-                    return round(used, 2), round(n1, 2), "Strategy 1 (Slash Logic)"
+                    valid_candidates.append({
+                        'used': round(used, 2),
+                        'rem': round(n1, 2),
+                        'total': n2
+                    })
             except: continue
+        
+        if valid_candidates:
+            best_match = max(valid_candidates, key=lambda x: x['total'])
+            return best_match['used'], best_match['rem'], "Strategy 1 (Slash Logic)"
 
-    # STRATEGY 2: EXPLICIT KEYWORDS (Medium Confidence)
-    # Looks for: "Used 15 GB" or "Terpakai 2 GB"
     used_pattern = r'(?:terpakai|used|pemakaian|usage).*?(\d+(?:\.\d+)?)\s*(gb|mb)'
     used_matches = re.findall(used_pattern, clean_text)
     if used_matches:
@@ -82,7 +78,6 @@ def calculate_usage_from_text(text):
         if explicit_used > 0:
             return round(explicit_used, 2), 0.0, "Strategy 2 (Explicit Keyword)"
 
-    # STRATEGY 3: NUMBER ANALYSIS (Fallback)
     gb_pattern = r'(\d+(?:\.\d+)?)\s*(?:gb|mb)'
     matches = re.findall(gb_pattern, clean_text)
     
@@ -90,7 +85,6 @@ def calculate_usage_from_text(text):
     for m in matches:
         try:
             v = float(m)
-            # Filter: Ignore years (2024-2030) and tiny noise
             if 0.01 < v < 2000: 
                 values.append(v)
         except: pass
@@ -99,7 +93,6 @@ def calculate_usage_from_text(text):
         return 0.0, 0.0, "No Data Found"
 
     if len(values) >= 2:
-        # Assume Max = Total, Min = Remaining
         total = max(values)
         rem = min(values)
         used = total - rem
@@ -116,20 +109,17 @@ def calculate_usage_from_text(text):
     return 0.0, 0.0, "Failed"
 
 def get_strategy_score(method_name):
-    """Higher score = More reliable method."""
-    if "Strategy 1" in method_name: return 10  # Best: Found "X / Y"
-    if "Strategy 2" in method_name: return 8   # Good: Found "Used X"
-    if "Max-Min" in method_name: return 6      # Okay: Found two numbers
-    if "Single Remaining" in method_name: return 5 # Okay: Found "Sisa X"
-    if "Single Usage" in method_name: return 1 # Bad: Just guessing
+    if "Strategy 1" in method_name: return 10
+    if "Strategy 2" in method_name: return 8
+    if "Max-Min" in method_name: return 6
+    if "Single Remaining" in method_name: return 5
+    if "Single Usage" in method_name: return 1
     return 0
 
-# --- 3. ENDPOINTS ---
-
-@app.head("/") # Fix for UptimeRobot
+@app.head("/")
 @app.get("/")
 def home():
-    return {"status": "OCR Service Operational", "version": "5.0 (Smart Scorer)"}
+    return {"status": "OCR Service Operational", "version": "6.0 (Multi-Package Logic)"}
 
 @app.post("/preview-ocr")
 async def preview_ocr(
@@ -146,7 +136,6 @@ async def preview_ocr(
         img_np = np.array(img)
         gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
         
-        # Create 3 Versions of the image to catch different visual styles
         adaptive = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 2)
         inverted = cv2.bitwise_not(adaptive)
         gray_eq = cv2.equalizeHist(gray)
@@ -155,7 +144,6 @@ async def preview_ocr(
         config = "--psm 6"
         results_list = []
         
-        # Run OCR on all 3 versions
         filters = [("adaptive", adaptive), ("inverted", inverted), ("standard", standard)]
         
         for name, processed_img in filters:
@@ -171,8 +159,6 @@ async def preview_ocr(
                 "text": raw_text[:50].replace('\n', ' ') 
             })
 
-        # WINNER SELECTION:
-        # Sort by Score (High to Low), then by Used Amount (High to Low)
         results_list.sort(key=lambda x: (x['score'], x['used']), reverse=True)
         best = results_list[0]
         
@@ -199,7 +185,6 @@ async def submit_report(
 
     content = await file.read()
     
-    # Quick Audit Scan (Adaptive only)
     try:
         img = Image.open(io.BytesIO(content)).convert("RGB")
         gray = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2GRAY)
@@ -209,7 +194,6 @@ async def submit_report(
     except:
         audit_used = 0.0
 
-    # Upload Image
     try:
         filename = f"{int(time.time())}_{file.filename.replace(' ', '_')}"
         folder = outlet_name_manual if outlet_name_manual else (outlet_id or "Unsorted")
@@ -224,7 +208,6 @@ async def submit_report(
     except Exception:
         storage_path = "error_upload_failed.jpg"
 
-    # Save Data
     try:
         data_payload = {
             "outlet_id": outlet_id if outlet_id != "OTHER" else None,
