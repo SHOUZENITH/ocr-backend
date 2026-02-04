@@ -44,32 +44,37 @@ def calculate_usage_from_text(text):
     clean_text = text.lower().replace(',', '.')
     
     slash_pattern = r'(\d+(?:\.\d+)?)\s*(?:gb|mb)?\s*[\\\/|1lI]\s*(\d+(?:\.\d+)?)\s*(?:gb|mb)?'
-    slash_matches = re.findall(slash_pattern, clean_text)
+    slash_matches = re.finditer(slash_pattern, clean_text)
     
     valid_candidates = []
 
-    if slash_matches:
-        for val1, val2 in slash_matches:
-            try:
-                n1 = float(val1)
-                n2 = float(val2)
-                
-                if n1 <= n2 and n2 < 5000:
-                    used = n2 - n1
-                    
-                    if used < 0: continue
+    for match in slash_matches:
+        full_str = match.group(0)
+        val1 = match.group(1)
+        val2 = match.group(2)
 
-                    valid_candidates.append({
-                        'used': round(used, 2),
-                        'rem': round(n1, 2),
-                        'total': n2,
-                        'text': f"{n1}/{n2}"
-                    })
-            except: continue
-        
-        if valid_candidates:
-            best_match = max(valid_candidates, key=lambda x: x['total'])
-            return best_match['used'], best_match['rem'], f"Strategy 1 (Best of {len(valid_candidates)}: {best_match['text']})"
+        if not re.search(r'[gm]', full_str):
+            continue
+
+        try:
+            n1 = float(val1)
+            n2 = float(val2)
+            
+            if n1 <= n2 and n2 < 5000:
+                used = n2 - n1
+                if used < 0: continue
+
+                valid_candidates.append({
+                    'used': round(used, 2),
+                    'rem': round(n1, 2),
+                    'total': n2,
+                    'text': full_str
+                })
+        except: continue
+    
+    if valid_candidates:
+        best_match = max(valid_candidates, key=lambda x: x['total'])
+        return best_match['used'], best_match['rem'], f"Strategy 1 (Best of {len(valid_candidates)} matches)"
 
     used_pattern = r'(?:terpakai|used|pemakaian|usage).*?(\d+(?:\.\d+)?)\s*(gb|mb)'
     used_matches = re.findall(used_pattern, clean_text)
@@ -122,7 +127,7 @@ def get_strategy_score(method_name):
 @app.head("/")
 @app.get("/")
 def home():
-    return {"status": "OCR Service Operational", "version": "7.0 (Regex Relaxed + PSM 4)"}
+    return {"status": "OCR Service Operational", "version": "8.0 (Safe Backward Compatible)"}
 
 @app.post("/preview-ocr")
 async def preview_ocr(
@@ -159,7 +164,7 @@ async def preview_ocr(
                 "remaining": rem,
                 "method": f"{name.upper()}: {method}",
                 "score": score,
-                "text": raw_text[:200].replace('\n', ' ') 
+                "text": raw_text[:200].replace('\n', ' ')
             })
 
         results_list.sort(key=lambda x: (x['score'], x['used']), reverse=True)
