@@ -43,9 +43,7 @@ def parse_size_to_gb(value_str, unit_str="GB"):
 def calculate_usage_from_text(text):
     clean_text = text.lower().replace(',', '.')
     
-    is_remaining_context = bool(re.search(r's[i1l]sa|rem|left|kuota|bal', clean_text))
-
-    slash_pattern = r'(\d+(?:\.\d+)?)\s*(?:gb|mb)?\s*[\\\/|1lI]\s*(\d+(?:\.\d+)?)\s*(?:gb|mb)'
+    slash_pattern = r'(\d+(?:\.\d+)?)\s*(?:gb|mb)?\s*[\\\/|1lI]\s*(\d+(?:\.\d+)?)\s*(?:gb|mb)?'
     slash_matches = re.findall(slash_pattern, clean_text)
     
     valid_candidates = []
@@ -56,18 +54,22 @@ def calculate_usage_from_text(text):
                 n1 = float(val1)
                 n2 = float(val2)
                 
-                if n1 <= n2 and n2 < 2000:
+                if n1 <= n2 and n2 < 5000:
                     used = n2 - n1
+                    
+                    if used < 0: continue
+
                     valid_candidates.append({
                         'used': round(used, 2),
                         'rem': round(n1, 2),
-                        'total': n2
+                        'total': n2,
+                        'text': f"{n1}/{n2}"
                     })
             except: continue
         
         if valid_candidates:
             best_match = max(valid_candidates, key=lambda x: x['total'])
-            return best_match['used'], best_match['rem'], "Strategy 1 (Slash Logic)"
+            return best_match['used'], best_match['rem'], f"Strategy 1 (Best of {len(valid_candidates)}: {best_match['text']})"
 
     used_pattern = r'(?:terpakai|used|pemakaian|usage).*?(\d+(?:\.\d+)?)\s*(gb|mb)'
     used_matches = re.findall(used_pattern, clean_text)
@@ -100,6 +102,7 @@ def calculate_usage_from_text(text):
         return round(used, 2), round(rem, 2), "Strategy 3 (Max-Min Calc)"
     
     elif len(values) == 1:
+        is_remaining_context = bool(re.search(r's[i1l]sa|rem|left|kuota|bal', clean_text))
         val = values[0]
         if is_remaining_context:
             return 0.0, round(val, 2), "Strategy 3 (Single Remaining)"
@@ -119,7 +122,7 @@ def get_strategy_score(method_name):
 @app.head("/")
 @app.get("/")
 def home():
-    return {"status": "OCR Service Operational", "version": "6.0 (Multi-Package Logic)"}
+    return {"status": "OCR Service Operational", "version": "7.0 (Regex Relaxed + PSM 4)"}
 
 @app.post("/preview-ocr")
 async def preview_ocr(
@@ -141,7 +144,7 @@ async def preview_ocr(
         gray_eq = cv2.equalizeHist(gray)
         _, standard = cv2.threshold(gray_eq, 150, 255, cv2.THRESH_BINARY)
         
-        config = "--psm 6"
+        config = "--psm 4" 
         results_list = []
         
         filters = [("adaptive", adaptive), ("inverted", inverted), ("standard", standard)]
@@ -154,9 +157,9 @@ async def preview_ocr(
             results_list.append({
                 "used": used,
                 "remaining": rem,
-                "method": method,
+                "method": f"{name.upper()}: {method}",
                 "score": score,
-                "text": raw_text[:50].replace('\n', ' ') 
+                "text": raw_text[:200].replace('\n', ' ') 
             })
 
         results_list.sort(key=lambda x: (x['score'], x['used']), reverse=True)
@@ -189,7 +192,7 @@ async def submit_report(
         img = Image.open(io.BytesIO(content)).convert("RGB")
         gray = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2GRAY)
         adaptive = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 2)
-        text = pytesseract.image_to_string(adaptive, config="--psm 6")
+        text = pytesseract.image_to_string(adaptive, config="--psm 4")
         audit_used, _, _ = calculate_usage_from_text(text)
     except:
         audit_used = 0.0
