@@ -1,8 +1,11 @@
 fastapi
 uvicorn
-pytesseract
-opencv-python-headless
-numpy
-pillow
 python-multipart
-supabase 
+numpy
+opencv-python-headless
+pytesseract
+Pillow
+supabase
+sentence-transformers
+rapidfuzz
+torch
