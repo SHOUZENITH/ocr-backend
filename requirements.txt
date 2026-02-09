@@ -8,4 +8,3 @@ Pillow
 supabase
 sentence-transformers
 rapidfuzz
-torch
