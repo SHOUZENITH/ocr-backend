@@ -2,6 +2,7 @@ import os
 import time
 import io
 import re
+import requests
 import numpy as np
 import cv2
 import pytesseract
@@ -14,14 +15,14 @@ app = FastAPI()
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")
+HF_API_URL = os.environ.get("HF_API_URL")
 
 supabase: Client = None
 if SUPABASE_URL and SUPABASE_KEY:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        print("✅ Supabase Connected")
-    except Exception as e:
-        print(f"❌ Supabase Connection Failed: {e}")
+    except Exception:
+        pass
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,150 +38,54 @@ def parse_size_to_gb(value_str, unit_str="GB"):
         if "MB" in unit: return val / 1024.0
         if "KB" in unit: return val / (1024.0 * 1024.0)
         return val
-    except ValueError:
-        return 0.0
+    except: return 0.0
 
 def calculate_usage_from_text(text):
     clean_text = text.lower().replace(',', '.')
-    
-    slash_pattern = r'(\d+(?:\.\d+)?)\s*(?:gb|mb)?\s*[\\\/|1lI]\s*(\d+(?:\.\d+)?)\s*(?:gb|mb)?'
-    slash_matches = re.finditer(slash_pattern, clean_text)
-    
-    valid_candidates = []
-
-    for match in slash_matches:
-        full_str = match.group(0)
-        val1 = match.group(1)
-        val2 = match.group(2)
-
-        if not re.search(r'[gm]', full_str):
-            continue
-
-        try:
-            n1 = float(val1)
-            n2 = float(val2)
-            
-            if n1 <= n2 and n2 < 5000:
-                used = n2 - n1
-                if used < 0: continue
-
-                valid_candidates.append({
-                    'used': round(used, 2),
-                    'rem': round(n1, 2),
-                    'total': n2,
-                    'text': full_str
-                })
-        except: continue
-    
-    if valid_candidates:
-        best_match = max(valid_candidates, key=lambda x: x['total'])
-        return best_match['used'], best_match['rem'], f"Strategy 1 (Best of {len(valid_candidates)} matches)"
-
-    used_pattern = r'(?:terpakai|used|pemakaian|usage).*?(\d+(?:\.\d+)?)\s*(gb|mb)'
-    used_matches = re.findall(used_pattern, clean_text)
-    if used_matches:
-        explicit_used = 0.0
-        for val, unit in used_matches:
-            explicit_used += parse_size_to_gb(val, unit)
-        if explicit_used > 0:
-            return round(explicit_used, 2), 0.0, "Strategy 2 (Explicit Keyword)"
-
     gb_pattern = r'(\d+(?:\.\d+)?)\s*(?:gb|mb)'
     matches = re.findall(gb_pattern, clean_text)
-    
-    values = []
-    for m in matches:
-        try:
-            v = float(m)
-            if 0.01 < v < 2000: 
-                values.append(v)
-        except: pass
-        
-    if not values:
-        return 0.0, 0.0, "No Data Found"
-
+    values = [float(m) for m in matches if 0.01 < float(m) < 2000]
     if len(values) >= 2:
-        total = max(values)
-        rem = min(values)
-        used = total - rem
-        if used == 0: return 0.0, total, "Strategy 3 (Duplicate Read)"
-        return round(used, 2), round(rem, 2), "Strategy 3 (Max-Min Calc)"
-    
-    elif len(values) == 1:
-        is_remaining_context = bool(re.search(r's[i1l]sa|rem|left|kuota|bal', clean_text))
-        val = values[0]
-        if is_remaining_context:
-            return 0.0, round(val, 2), "Strategy 3 (Single Remaining)"
-        else:
-            return round(val, 2), 0.0, "Strategy 3 (Single Usage - Risky)"
+        return round(max(values) - min(values), 2), round(min(values), 2), "Max-Min Calc"
+    return (0.0, values[0], "Single Value") if values else (0.0, 0.0, "No Data")
 
-    return 0.0, 0.0, "Failed"
-
-def get_strategy_score(method_name):
-    if "Strategy 1" in method_name: return 10
-    if "Strategy 2" in method_name: return 8
-    if "Max-Min" in method_name: return 6
-    if "Single Remaining" in method_name: return 5
-    if "Single Usage" in method_name: return 1
-    return 0
-
-@app.head("/")
 @app.get("/")
 def home():
-    return {"status": "OCR Service Operational", "version": "8.0 (Safe Backward Compatible)"}
+    return {"status": "active"}
 
-@app.post("/preview-ocr")
-async def preview_ocr(
+@app.post("/process-document")
+async def process_document(
     file: UploadFile = File(...),
-    content_length: int = Header(None)
+    task_type: str = Form("quota")
 ):
-    if content_length and content_length > 5 * 1024 * 1024:
-        raise HTTPException(413, "File too large (Max 5MB)")
-
     content = await file.read()
-    
     try:
         img = Image.open(io.BytesIO(content)).convert("RGB")
         img_np = np.array(img)
         gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
-        
         adaptive = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 2)
-        inverted = cv2.bitwise_not(adaptive)
-        gray_eq = cv2.equalizeHist(gray)
-        _, standard = cv2.threshold(gray_eq, 150, 255, cv2.THRESH_BINARY)
-        
-        config = "--psm 4" 
-        results_list = []
-        
-        filters = [("adaptive", adaptive), ("inverted", inverted), ("standard", standard)]
-        
-        for name, processed_img in filters:
-            raw_text = pytesseract.image_to_string(processed_img, config=config)
+        raw_text = pytesseract.image_to_string(adaptive, config="--psm 6")
+
+        if task_type == "quota":
             used, rem, method = calculate_usage_from_text(raw_text)
-            score = get_strategy_score(method)
+            return {"used": used, "remaining": rem, "method": method}
+
+        elif task_type == "invoice":
+            if not HF_API_URL:
+                return {"error": "HF_API_URL_MISSING", "raw_text": raw_text}
             
-            results_list.append({
-                "used": used,
-                "remaining": rem,
-                "method": f"{name.upper()}: {method}",
-                "score": score,
-                "text": raw_text[:200].replace('\n', ' ')
-            })
-
-        results_list.sort(key=lambda x: (x['score'], x['used']), reverse=True)
-        best = results_list[0]
-        
-        return {
-            "used": best["used"],
-            "remaining": best["remaining"],
-            "debug_method": best["method"],
-            "debug_score": best["score"],
-            "debug_text": best["text"]
-        }
-
+            lines = [l.strip() for l in raw_text.split('\n') if len(l.strip()) > 3]
+            matches = []
+            for line in lines:
+                try:
+                    hf_res = requests.get(HF_API_URL, params={"text": line}, timeout=5)
+                    data = hf_res.json()
+                    if data.get("matched_product") != "No Match":
+                        matches.append(data)
+                except: continue
+            return {"type": "invoice", "matches": matches}
     except Exception as e:
-        print(f"OCR Error: {e}")
-        return {"error": str(e), "used": 0, "remaining": 0}
+        return {"error": str(e)}
 
 @app.post("/submit-report")
 async def submit_report(
@@ -189,20 +94,15 @@ async def submit_report(
     outlet_name_manual: str = Form(None),
     user_corrected_usage: float = Form(...)
 ):
-    if not supabase: raise HTTPException(500, "Database Not Configured")
-
+    if not supabase: return {"error": "no_db"}
     content = await file.read()
-    
     try:
         img = Image.open(io.BytesIO(content)).convert("RGB")
         gray = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2GRAY)
         adaptive = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 2)
         text = pytesseract.image_to_string(adaptive, config="--psm 4")
         audit_used, _, _ = calculate_usage_from_text(text)
-    except:
-        audit_used = 0.0
-
-    try:
+        
         filename = f"{int(time.time())}_{file.filename.replace(' ', '_')}"
         folder = outlet_name_manual if outlet_name_manual else (outlet_id or "Unsorted")
         clean_folder = re.sub(r'[^a-zA-Z0-9_-]', '', folder)
@@ -213,10 +113,7 @@ async def submit_report(
             file=content,
             file_options={"content-type": file.content_type}
         )
-    except Exception:
-        storage_path = "error_upload_failed.jpg"
 
-    try:
         data_payload = {
             "outlet_id": outlet_id if outlet_id != "OTHER" else None,
             "outlet_name_manual": outlet_name_manual,
@@ -227,9 +124,7 @@ async def submit_report(
             "image_url": storage_path,
             "created_at": time.strftime('%Y-%m-%dT%H:%M:%S')
         }
-        
         supabase.table("quota_reports").insert(data_payload).execute()
-        return {"status": "success", "data": data_payload}
-        
+        return {"status": "success"}
     except Exception as e:
-        raise HTTPException(500, f"DB Error: {str(e)}")
+        return {"error": str(e)}
