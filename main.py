@@ -103,10 +103,17 @@ async def submit_report(
         text = pytesseract.image_to_string(adaptive, config="--psm 4")
         audit_used, _, _ = calculate_usage_from_text(text)
         
+        # Time variables
+        current_year = time.strftime('%Y')
+        current_week = time.strftime('%U')
         filename = f"{int(time.time())}_{file.filename.replace(' ', '_')}"
+        
+        # Folder Logic
         folder = outlet_name_manual if outlet_name_manual else (outlet_id or "Unsorted")
         clean_folder = re.sub(r'[^a-zA-Z0-9_-]', '', folder)
-        storage_path = f"{clean_folder}/{filename}"
+        
+        # Path: quota/OutletName/2026/Week_07/filename.jpg
+        storage_path = f"quota/{clean_folder}/{current_year}/Week_{current_week}/{filename}"
         
         supabase.storage.from_("Screenshots").upload(
             path=storage_path,
@@ -117,7 +124,7 @@ async def submit_report(
         data_payload = {
             "outlet_id": outlet_id if outlet_id != "OTHER" else None,
             "outlet_name_manual": outlet_name_manual,
-            "week": f"Week {time.strftime('%U')}",
+            "week": f"{current_year} Week {current_week}", # "2026 Week 07"
             "ocr_used_gb": audit_used,
             "final_used_gb": user_corrected_usage,
             "verified": True,
