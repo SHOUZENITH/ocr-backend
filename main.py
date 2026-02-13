@@ -141,17 +141,19 @@ async def submit_report(
         final_image_url = public_url_resp if isinstance(public_url_resp, str) else public_url_resp.get("publicUrl")
 
         data_payload = {
+            "id": None, 
+            "created_at": "now()",
             "phone_number": phone_number,
-            "outlet_id": outlet_id if outlet_id else None,
-            "outlet_name_manual": outlet_name_manual,
-            "week": f"{current_year}-W{current_week}", 
-            "ocr_used_gb": audit_used,
-            "ocr_rem_final": audit_rem,   
-            "final_used_gb": user_corrected_usage,
-            "verified": True,
-            "confirmed_at": "now()",      
             "image_url": final_image_url,
+            "ocr_result_gb": audit_used,          
+            "final_result_gb": user_corrected_usage, 
+            "rem_gb": audit_rem,                  
+            "week": f"{current_year}-W{current_week}",
+            "confirmation": True,                 
+            "confirmed_at": "now()"
         }
+        
+        del data_payload["id"] 
         
         response = supabase.table("quota_reports").insert(data_payload).execute()
         return {"status": "success", "data": response.data}
