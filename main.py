@@ -6,7 +6,7 @@ import requests
 import numpy as np
 import cv2
 import pytesseract
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Header
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 from supabase import create_client, Client
@@ -21,8 +21,8 @@ supabase: Client = None
 if SUPABASE_URL and SUPABASE_KEY:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Supabase Init Error: {e}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -44,10 +44,17 @@ def calculate_usage_from_text(text):
     clean_text = text.lower().replace(',', '.')
     gb_pattern = r'(\d+(?:\.\d+)?)\s*(?:gb|mb)'
     matches = re.findall(gb_pattern, clean_text)
+    
     values = [float(m) for m in matches if 0.01 < float(m) < 2000]
+    
     if len(values) >= 2:
-        return round(max(values) - min(values), 2), round(min(values), 2), "Max-Min Calc"
-    return (0.0, values[0], "Single Value") if values else (0.0, 0.0, "No Data")
+        used = max(values) - min(values) 
+        remaining = min(values)
+        return round(used, 2), round(remaining, 2), "Max-Min Calc"
+    elif len(values) == 1:
+        return 0.0, values[0], "Single Value"
+    
+    return 0.0, 0.0, "No Data"
 
 @app.get("/")
 def home():
@@ -84,54 +91,71 @@ async def process_document(
                         matches.append(data)
                 except: continue
             return {"type": "invoice", "matches": matches}
+            
     except Exception as e:
         return {"error": str(e)}
 
 @app.post("/submit-report")
 async def submit_report(
     file: UploadFile = File(...),
+    phone_number: str = Form(...),
     outlet_id: str = Form(None),
     outlet_name_manual: str = Form(None),
     user_corrected_usage: float = Form(...)
 ):
-    if not supabase: return {"error": "no_db"}
+    if not supabase: 
+        return {"status": "error", "message": "Database not connected"}
+
     content = await file.read()
+    
     try:
         img = Image.open(io.BytesIO(content)).convert("RGB")
         gray = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2GRAY)
         adaptive = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 2)
         text = pytesseract.image_to_string(adaptive, config="--psm 4")
-        audit_used, _, _ = calculate_usage_from_text(text)
         
-        # Time variables
+        audit_used, audit_rem, _ = calculate_usage_from_text(text)
+        
         current_year = time.strftime('%Y')
-        current_week = time.strftime('%U')
+        current_week = time.strftime('%W')
         filename = f"{int(time.time())}_{file.filename.replace(' ', '_')}"
         
-        # Folder Logic
-        folder = outlet_name_manual if outlet_name_manual else (outlet_id or "Unsorted")
-        clean_folder = re.sub(r'[^a-zA-Z0-9_-]', '', folder)
-        
-        # Path: quota/OutletName/2026/Week_07/filename.jpg
+        folder_name = "Unsorted"
+        if outlet_name_manual and outlet_name_manual != "TBD":
+            folder_name = outlet_name_manual
+        elif outlet_id:
+            folder_name = outlet_id
+            
+        clean_folder = re.sub(r'[^a-zA-Z0-9_-]', '', folder_name)
         storage_path = f"quota/{clean_folder}/{current_year}/Week_{current_week}/{filename}"
         
-        supabase.storage.from_("Screenshots").upload(
+        bucket_name = "quota_evidence" 
+        
+        supabase.storage.from_(bucket_name).upload(
             path=storage_path,
             file=content,
             file_options={"content-type": file.content_type}
         )
+        
+        public_url_resp = supabase.storage.from_(bucket_name).get_public_url(storage_path)
+        final_image_url = public_url_resp if isinstance(public_url_resp, str) else public_url_resp.get("publicUrl")
 
         data_payload = {
-            "outlet_id": outlet_id if outlet_id != "OTHER" else None,
+            "phone_number": phone_number,
+            "outlet_id": outlet_id if outlet_id else None,
             "outlet_name_manual": outlet_name_manual,
-            "week": f"{current_year} Week {current_week}", # "2026 Week 07"
+            "week": f"{current_year}-W{current_week}", 
             "ocr_used_gb": audit_used,
+            "ocr_rem_final": audit_rem,   
             "final_used_gb": user_corrected_usage,
             "verified": True,
-            "image_url": storage_path,
-            "created_at": time.strftime('%Y-%m-%dT%H:%M:%S')
+            "confirmed_at": "now()",      
+            "image_url": final_image_url,
         }
-        supabase.table("quota_reports").insert(data_payload).execute()
-        return {"status": "success"}
+        
+        response = supabase.table("quota_reports").insert(data_payload).execute()
+        return {"status": "success", "data": response.data}
+
     except Exception as e:
-        return {"error": str(e)}
+        print(f"Error: {str(e)}")
+        return {"status": "error", "message": str(e)}
