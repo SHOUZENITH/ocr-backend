@@ -1,0 +1,2302 @@
+{
+  "name": "BotSupport v.1",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ocr-backend-16cj.onrender.com/process-document",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "task_type",
+              "value": "quota"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -304,
+        2736
+      ],
+      "id": "b3f9f454-c97d-4b4f-a94a-6a877233deb0",
+      "name": "INVOICE HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "979383601928040",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+        "textBody": "=*Produk Terdeteksi*\n━━━━━━━━━━━━━━━━━━━━\n📦 Produk: {{ $node[\"INVOICE HTTP Request\"].json.matches[0].matched_product }}\n🎯 Confidence: {{ $node[\"INVOICE HTTP Request\"].json.matches[0].confidence }}%\n━━━━━━━━━━━━━━━━━━━━\n\nKetik *menu* untuk kembali ke menu utama.",
+        "additionalFields": {
+          "previewUrl": false
+        }
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        144,
+        2736
+      ],
+      "id": "52588f54-44ef-497b-b262-c73dcf568f12",
+      "name": "INVOICE OUTPUT",
+      "webhookId": "958b08dc-b309-4ad7-aa6f-5395c5c71b8a",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "979383601928040",
+        "recipientPhoneNumber": "={{ $('Define Variables').item.json.phone_num }}",
+        "textBody": "Silakan kirimkan foto/screenshot Anda sekarang.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1936,
+        1128
+      ],
+      "id": "ff94f2f9-56df-4d63-93c5-d308743abd15",
+      "name": "Status Changed",
+      "webhookId": "7adb5645-f0c7-4145-9d0b-8135b69b8a24",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check_user_exists",
+              "leftValue": "={{ $json.phone_number }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cd5628a5-a687-4f65-bfa2-2279934de620",
+      "name": "Check User Exists",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        144,
+        1312
+      ]
+    },
+    {
+      "parameters": {
+        "tableId": "user_sessions",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "phone_number",
+              "fieldValue": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}"
+            },
+            {
+              "fieldId": "flow_stage",
+              "fieldValue": "MENU"
+            }
+          ]
+        }
+      },
+      "id": "849c07a0-7723-4211-a966-a41b34ff0dfe",
+      "name": "Create New User",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        368,
+        1384
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "OuUD997DSs5KO2Hz",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "4e45ba17-6be2-4153-96d1-315b52e123df",
+      "name": "Quota Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -304,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "user_sessions",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "phone_number",
+              "fieldValue": "={{ $('Webhook').item.json.body.entry[0].changes[0].value.messages[0].from }}"
+            },
+            {
+              "fieldId": "current_mode",
+              "fieldValue": "IDLE"
+            }
+          ]
+        }
+      },
+      "id": "ae7dfeed-1b53-406f-98e7-4dbc588fdc2a",
+      "name": "Error Reset to IDLE",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        512
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "OuUD997DSs5KO2Hz",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "979383601928040",
+        "recipientPhoneNumber": "={{ $('Webhook').item.json.body.entry[0].changes[0].value.messages[0].from }}",
+        "textBody": "❌ Maaf, terjadi kesalahan saat memproses gambar Anda. Silakan coba lagi atau pilih menu lain.",
+        "additionalFields": {}
+      },
+      "id": "0fe0b93c-2105-40f6-bba0-205724479a09",
+      "name": "Error Message",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        144,
+        512
+      ],
+      "webhookId": "901a9433-e9dd-4823-b56e-0faac129d0be",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "quota_reports",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "phone_number",
+              "fieldValue": "={{ $('Define Variables').item.json.phone_num }}"
+            },
+            {
+              "fieldId": "ocr_result_gb",
+              "fieldValue": "={{ $('POST to Quota Backend').item.json.used }}"
+            },
+            {
+              "fieldId": "created_at",
+              "fieldValue": "={{ $now }}"
+            },
+            {
+              "fieldId": "week",
+              "fieldValue": "=Week {{ $now.format('W') }}"
+            },
+            {
+              "fieldId": "confirmation",
+              "fieldValue": "false"
+            },
+            {
+              "fieldId": "final_result_gb",
+              "fieldValue": "={{ $('POST to Quota Backend').item.json.used }}"
+            },
+            {
+              "fieldId": "rem_gb",
+              "fieldValue": "={{ $('POST to Quota Backend').item.json.remaining }}"
+            },
+            {
+              "fieldId": "image_url",
+              "fieldValue": "={{ $('WhatsApp Trigger').item.json.messages[0].image.id }}"
+            }
+          ]
+        }
+      },
+      "id": "53efea1e-ead4-4699-a523-3a89f5a4773b",
+      "name": "Log Quota Report",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2384,
+        1792
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "OuUD997DSs5KO2Hz",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {
+          "messageStatusUpdates": []
+        }
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -304,
+        1312
+      ],
+      "id": "66789c80-f9b6-4feb-b958-655e9fde5654",
+      "name": "WhatsApp Trigger",
+      "webhookId": "bd5bd34b-219c-48a4-afef-ce550ea950e2",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "EI8cUlEX05VkdouN",
+          "name": "BotSupportOauth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "979383601928040",
+        "recipientPhoneNumber": "={{ $('Define Variables').item.json.phone_num }}",
+        "textBody": "Kamu Salah input ",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1712,
+        1504
+      ],
+      "id": "18d9111a-d35f-42b8-8668-dd24ae9107c7",
+      "name": "Salah input",
+      "webhookId": "f5df3c27-3920-47e4-8665-5edfd9957c1d",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v18.0/979383601928040/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{$('WhatsApp Trigger').item.json.messages[0].from}}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"list\",\n    \"header\": {\n      \"type\": \"text\",\n      \"text\": \"Konfirmasi Laporan\"\n    },\n    \"body\": {\n      \"text\": \"*Laporan Kuota Anda*\\n━━━━━━━━━━━━━━━━━━━━\\nTerpakai: {{$node['POST to Quota Backend'].json.used}} GB\\nTersisa: {{$node['POST to Quota Backend'].json.remaining}} GB\\n━━━━━━━━━━━━━━━━━━━━\\n\\nSilahkan Konfirmasi Laporan Penggunaan Kuota\"\n    },\n    \"action\": {\n      \"button\": \"Konfirmasi\",\n      \"sections\": [\n        {\n          \"title\": \"Layanan\",\n          \"rows\": [\n            {\n              \"id\": \"quota_Confirmed\",\n              \"title\": \"Laporan Terkonfirmasi\"\n            },\n            {\n              \"id\": \"quota_notConfirmed\",\n              \"title\": \"Laporan Kuota Salah\"\n            }\n          ]\n        }\n      ]\n    }\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3056,
+        1968
+      ],
+      "id": "11c183aa-e1e8-45c2-b1ae-a19b91631ccf",
+      "name": "Quota Confirmation HTTP request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "mDhvbL6k7WLp6rk7",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "quota_reports",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Define Variables').item.json.session_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "confirmation",
+              "fieldValue": "true"
+            },
+            {
+              "fieldId": "confirmed_at",
+              "fieldValue": "={{ $now }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1936,
+        2320
+      ],
+      "id": "a2ddc06a-bfe9-4f21-847f-057f9d4bdbb6",
+      "name": "Finished Quota Report",
+      "credentials": {
+        "supabaseApi": {
+          "id": "OuUD997DSs5KO2Hz",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "user_sessions",
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone_number",
+              "condition": "eq",
+              "keyValue": "={{ $json.messages?.[0]?.from }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        1312
+      ],
+      "id": "1a77cb2b-a9a4-498d-945c-a958b72acbe7",
+      "name": "Get user rows",
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "OuUD997DSs5KO2Hz",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "quota_reports",
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Define Variables').item.json.session_id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1488,
+        2328
+      ],
+      "id": "7f02305a-e75f-410a-ac11-16aa4c665146",
+      "name": "Get Quota rows",
+      "credentials": {
+        "supabaseApi": {
+          "id": "OuUD997DSs5KO2Hz",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "979383601928040",
+        "recipientPhoneNumber": "={{ $('Define Variables').item.json.phone_num }}",
+        "textBody": "=*Laporan Kuota Anda*\n━━━━━━━━━━━━━━━━━━━━\nTerpakai: {{ $('Get Quota rows').item.json.final_result_gb }} GB\nTersisa: {{ $('Get Quota rows').item.json.rem_gb }} GB\n━━━━━━━━━━━━━━━━━━━━\n\nLaporan Disimpan\n\nKetik *menu* untuk kembali ke menu utama.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        3056,
+        2320
+      ],
+      "id": "6e8fb279-f56b-4fb8-9096-d2f832f9c4a3",
+      "name": "QUOTA SAVED OUTPUT",
+      "webhookId": "2f8095bb-d8d8-4060-b3d3-2c078558bd9d",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ocr-backend-16cj.onrender.com/submit-report",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "user_corrected_usage",
+              "value": "={{ $('Get Quota rows').item.json.final_result_gb }}"
+            },
+            {
+              "name": "outlet_name_manual",
+              "value": "TBD"
+            },
+            {
+              "name": "phone_number",
+              "value": "={{ $('Define Variables').item.json.phone_num }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2608,
+        2320
+      ],
+      "id": "d3daccd5-188e-41b7-b438-b691a50b3cf1",
+      "name": "FINALIZED HTTP Request"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "quota_reports",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $('Get user rows').item.json.temp_data }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "final_used_gb",
+              "fieldValue": "={{ $('WhatsApp Trigger').item.json.messages[0].text.body }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2608,
+        2128
+      ],
+      "id": "d0573cd4-3543-45ec-9445-7f35d7dc4687",
+      "name": "Update Quota Data",
+      "credentials": {
+        "supabaseApi": {
+          "id": "OuUD997DSs5KO2Hz",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "979383601928040",
+        "recipientPhoneNumber": "={{ $('Define Variables').item.json.phone_num }}",
+        "textBody": "Gambar Sedang Diproses",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1936,
+        1600
+      ],
+      "id": "07ba59a6-ea74-4a4a-bfa9-5e8fb5e1612a",
+      "name": "Processing Image",
+      "webhookId": "985ad856-2193-4d9b-8e95-b7453a735aaf",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "user_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone_number",
+              "condition": "eq",
+              "keyValue": "={{ $('Define Variables').item.json.phone_num }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "session_id",
+              "fieldValue": "={{ $json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2608,
+        1792
+      ],
+      "id": "2bd9b5ae-7ac0-4e17-9193-aeb4ccbf18c3",
+      "name": "ADD USER Session ID",
+      "credentials": {
+        "supabaseApi": {
+          "id": "OuUD997DSs5KO2Hz",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "979383601928040",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+        "messageType": "image",
+        "mediaPath": "useMediaId",
+        "mediaId": "={{ $('Get Quota rows').item.json.image_url }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        2832,
+        2128
+      ],
+      "id": "690fb738-fc34-4ed5-8b6b-2ceb2d8e5020",
+      "name": "Send message1",
+      "webhookId": "a0de79d2-4560-4868-90cd-0ed336189738",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "732ec75f-240b-48eb-a9ad-f27d11c00d4d",
+              "name": "btn_id",
+              "value": "={{ $('WhatsApp Trigger').item.json.messages[0].interactive.list_reply.id }}",
+              "type": "string"
+            },
+            {
+              "id": "7eadbb26-54b7-48c7-be35-30d153ba833a",
+              "name": "msg_type",
+              "value": "={{ $('WhatsApp Trigger').item.json.messages[0].type }}",
+              "type": "string"
+            },
+            {
+              "id": "9ad7afdc-bedd-4d9b-8029-345b80a3334b",
+              "name": "user_flow",
+              "value": "={{ $json.flow_stage }}",
+              "type": "string"
+            },
+            {
+              "id": "3aecbb83-c49f-4918-b65c-446b386bec44",
+              "name": "user_feature",
+              "value": "={{ $json.active_feature }}",
+              "type": "string"
+            },
+            {
+              "id": "d9847e2e-4731-4097-9b80-069035a0e8d7",
+              "name": "phone_num",
+              "value": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+              "type": "string"
+            },
+            {
+              "id": "dc489ba7-84a8-4935-a1ba-43aeba21fe8d",
+              "name": "msg_body",
+              "value": "={{ $('WhatsApp Trigger').item.json.messages[0].text.body }}",
+              "type": "string"
+            },
+            {
+              "id": "359dbacb-3177-44d1-9ffb-51b2f1f8a2fa",
+              "name": "session_id",
+              "value": "={{ $('Get user rows').item.json.session_id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        592,
+        1312
+      ],
+      "id": "fceaa51d-5fd5-48d8-b509-1cf71b014c0c",
+      "name": "Define Variables"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Define Variables').item.json.user_flow }}",
+                    "rightValue": "MENU",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "6d606939-a8ea-4327-a3fe-55e7dac06780"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "307adc83-25d7-4115-adfb-ea7caa2a7273",
+                    "leftValue": "={{ $('Define Variables').item.json.user_flow }}",
+                    "rightValue": "FEATURE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "fab5d508-2de7-498b-b1f8-77113d0e30fa",
+                    "leftValue": "={{ $('Define Variables').item.json.user_flow }}",
+                    "rightValue": "CONFIRMATION",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1040,
+        1680
+      ],
+      "id": "5e2d6a9f-ea50-4d47-ab45-e637f220fd51",
+      "name": "State Router"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.btn_id }}",
+                    "rightValue": "menu_kuota",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cb300264-4476-4789-96c0-a783f9094d06"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "b296268d-4d30-412c-b87e-5a3bf142d944",
+                    "leftValue": "={{ $json.btn_id }}",
+                    "rightValue": "menu_invoice",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1264,
+        1016
+      ],
+      "id": "c59bf57c-0058-450b-bdf2-37e54480b746",
+      "name": "MENU HANDLER"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "979383601928040",
+        "recipientPhoneNumber": "={{ $('Define Variables').item.json.phone_num }}",
+        "textBody": "Silahkan Pilih Item di dalam Menu",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1488,
+        928
+      ],
+      "id": "3599c842-102a-4007-956c-39bf05a3a52b",
+      "name": "Fallback Menu Handler",
+      "webhookId": "954001c0-9421-4932-a882-3a0916f0d72e",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "35c11301-8777-49ee-9e8f-a44cc1f6bf6c",
+              "leftValue": "={{ $('Define Variables').item.json.msg_type }}",
+              "rightValue": "image",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1488,
+        1512
+      ],
+      "id": "b77ede69-c20e-4af6-995f-cdc01f1d21c3",
+      "name": "Check Image Quota"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "35c11301-8777-49ee-9e8f-a44cc1f6bf6c",
+              "leftValue": "={{ $('Define Variables').item.json.msg_type }}",
+              "rightValue": "image",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1488,
+        1888
+      ],
+      "id": "e15c88f0-92c4-4d20-83de-50a411a9b3df",
+      "name": "Check Image Invoice"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $('WhatsApp Trigger').item.json.messages[0].image.id }}"
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1712,
+        1696
+      ],
+      "id": "bd73c83a-06ef-4e1f-8b0c-200716bb8084",
+      "name": "Download media Quota",
+      "webhookId": "ed8cd789-1fd0-4739-8d25-0d2f2ea4177f",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $('WhatsApp Trigger').item.json.messages[0].image.id }}"
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1712,
+        1936
+      ],
+      "id": "c77cf259-5c92-4b71-a1e8-57009ccb03c5",
+      "name": "Download media Invoice",
+      "webhookId": "ed8cd789-1fd0-4739-8d25-0d2f2ea4177f",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1936,
+        1984
+      ],
+      "id": "5f9e82dc-c2b3-4693-b3f8-af5387b3d27b",
+      "name": "Get Invoice Image Binary",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "mDhvbL6k7WLp6rk7",
+          "name": "Header Auth account"
+        },
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1936,
+        1792
+      ],
+      "id": "b633ec8c-c5bf-4af5-955f-fe66127e72f4",
+      "name": "Get Quota Image Binary",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "mDhvbL6k7WLp6rk7",
+          "name": "Header Auth account"
+        },
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ocr-backend-16cj.onrender.com/process-document",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "task_type",
+              "value": "quota"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2160,
+        1792
+      ],
+      "id": "1d4141ed-625c-4fc9-9bcb-6a21dd1eb4bd",
+      "name": "POST to Quota Backend"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "979383601928040",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.contacts[0].wa_id }}",
+        "textBody": "Silahkan Kirim Angka yang benar",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1936,
+        2512
+      ],
+      "id": "774d059e-9477-4444-9c56-b71760d8f9ec",
+      "name": "Get Correct Numbers",
+      "webhookId": "815535f8-ffc4-4239-8a98-07ff640c8b99",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Define Variables').item.json.btn_id }}",
+                    "rightValue": "quota_Confirmed",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "188c2ffb-d79f-4b37-9b37-86172519e1ce"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "ee0c7ff0-0bd2-4322-af60-e5f0bea16e22",
+                    "leftValue": "={{ $('Define Variables').item.json.btn_id }}",
+                    "rightValue": "quota_notConfirmed",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "35c04e3f-3428-4794-9d5e-eebb98ef3272",
+                    "leftValue": "={{ $('Define Variables').item.json.msg_body }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEmpty",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1712,
+        2312
+      ],
+      "id": "f130b81e-fb0d-4aae-b29b-1fd3de28ce43",
+      "name": "Handle Confirmation"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "69da1e1c-9c86-45e5-a4cc-ce86ed06b8a2",
+              "leftValue": "={{ $json.btn_id }}",
+              "rightValue": "menu_reset",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "bcba1b45-d031-4c6f-8c4c-bc6cf42a4aea",
+              "leftValue": "={{ ($json.msg_body || '').toLowerCase() }}",
+              "rightValue": "menu",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        816,
+        1312
+      ],
+      "id": "23af025b-feab-4e85-8f0b-00d1d2fb7eb1",
+      "name": "Global Interrupts"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "979383601928040",
+        "recipientPhoneNumber": "={{ $('Define Variables').item.json.phone_num }}",
+        "textBody": "Session direset. Silakan ketik menu untuk memulai kembali.",
+        "additionalFields": {}
+      },
+      "id": "274c7372-31ea-4b44-86e9-2d0544edd166",
+      "name": "Reset Confirmation MSG",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1488,
+        736
+      ],
+      "webhookId": "660a71ef-1271-4cf9-978d-1b2a66ca4641",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v18.0/979383601928040/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"={{ $('Define Variables').item.json.phone_num }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"list\",\n    \"header\": {\n      \"type\": \"text\",\n      \"text\": \"Main Menu\"\n    },\n    \"body\": {\n      \"text\": \"Silakan pilih layanan yang Anda butuhkan:\"\n    },\n    \"action\": {\n      \"button\": \"Pilih Menu\",\n      \"sections\": [\n        {\n          \"title\": \"Layanan\",\n          \"rows\": [\n            {\n              \"id\": \"menu_kuota\",\n              \"title\": \"Cek Kuota\",\n              \"description\": \"Cek sisa kuota internet\"\n            },\n            {\n              \"id\": \"menu_invoice\",\n              \"title\": \"Scan Invoice\",\n              \"description\": \"Scan dan verifikasi invoice\"\n            },\n            {\n              \"id\": \"menu_reset\",\n              \"title\": \"Reset\",\n              \"description\": \"Batalkan dan kembali ke menu\"\n            }\n          ]\n        }\n      ]\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1712,
+        736
+      ],
+      "id": "50578ced-c094-406c-92a6-ed79049593e9",
+      "name": "MAIN MENU",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "mDhvbL6k7WLp6rk7",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "user_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone_number",
+              "condition": "eq",
+              "keyValue": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "phone_number",
+              "fieldValue": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}"
+            },
+            {
+              "fieldId": "current_mode",
+              "fieldValue": "IDLE"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        2736
+      ],
+      "id": "98846783-a7d3-4877-88a7-ee69fd3313f3",
+      "name": "Mode to IDLE",
+      "credentials": {
+        "supabaseApi": {
+          "id": "OuUD997DSs5KO2Hz",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Define Variables').item.json.user_feature }}",
+                    "rightValue": "QUOTA",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "81dfe06c-a9c5-454e-aeac-830374fcf483"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "77fa6189-0c07-4adc-9db1-00da271f8e83",
+                    "leftValue": "={{ $('Define Variables').item.json.user_feature }}",
+                    "rightValue": "INVOICE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1264,
+        1704
+      ],
+      "id": "6923a7f6-9cdd-436d-9e12-b2ed6da0c589",
+      "name": "Feature Router"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Define Variables').item.json.user_feature }}",
+                    "rightValue": "QUOTA",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "fd94a51b-d164-4bca-b778-a6f56a021305"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1264,
+        2328
+      ],
+      "id": "4a0235b1-03f7-42fe-9cf4-d5633f78b4fc",
+      "name": "Confirmation Router"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "user_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone_number",
+              "condition": "eq",
+              "keyValue": "={{ $('Define Variables').item.json.phone_num }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "phone_number",
+              "fieldValue": "={{ $('Define Variables').item.json.phone_num }}"
+            },
+            {
+              "fieldId": "flow_stage",
+              "fieldValue": "MENU"
+            }
+          ]
+        }
+      },
+      "id": "487091e2-d4d6-468d-93b4-d8cd27d7a3c2",
+      "name": "Reset to MENU",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        736
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "OuUD997DSs5KO2Hz",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "user_sessions",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone_number",
+              "condition": "eq",
+              "keyValue": "={{ $('Define Variables').item.json.phone_num }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "phone_number",
+              "fieldValue": "={{ $('Define Variables').item.json.phone_num }}"
+            },
+            {
+              "fieldId": "active_feature",
+              "fieldValue": "QUOTA"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1488,
+        1120
+      ],
+      "id": "8ccabdf4-0a7a-4b3b-b803-a4a659e4c663",
+      "name": "Feature to QUOTA",
+      "credentials": {
+        "supabaseApi": {
+          "id": "OuUD997DSs5KO2Hz",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "user_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone_number",
+              "condition": "eq",
+              "keyValue": "={{ $('Define Variables').item.json.phone_num }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "phone_number",
+              "fieldValue": "={{ $('Define Variables').item.json.phone_num }}"
+            },
+            {
+              "fieldId": "active_feature",
+              "fieldValue": "INVOICE"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1488,
+        1312
+      ],
+      "id": "a2be5283-b132-4b8f-9ba4-f999eaab439d",
+      "name": "Feature to Invoice",
+      "credentials": {
+        "supabaseApi": {
+          "id": "OuUD997DSs5KO2Hz",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "user_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone_number",
+              "condition": "eq",
+              "keyValue": "={{ $('Define Variables').item.json.phone_num }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "phone_number",
+              "fieldValue": "={{ $('Define Variables').item.json.phone_num }}"
+            },
+            {
+              "fieldId": "flow_stage",
+              "fieldValue": "FEATURE"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1712,
+        1128
+      ],
+      "id": "4fb0d70a-1572-4a62-9c1b-39906c8f1bc6",
+      "name": "Flow to Feature",
+      "credentials": {
+        "supabaseApi": {
+          "id": "OuUD997DSs5KO2Hz",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "979383601928040",
+        "recipientPhoneNumber": "={{ $('Define Variables').item.json.phone_num }}",
+        "messageType": "image",
+        "mediaPath": "useMediaId",
+        "mediaId": "={{ $('Download media Quota').item.json.id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        2832,
+        1792
+      ],
+      "id": "f6b04ee3-337c-4d9c-977a-e908efb64cf2",
+      "name": "Send image",
+      "webhookId": "9af92f90-46d9-461e-9012-dea9f293fef8",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "user_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone_number",
+              "condition": "eq",
+              "keyValue": "={{ $('Define Variables').item.json.phone_num }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "phone_number",
+              "fieldValue": "={{ $('Define Variables').item.json.phone_num }}"
+            },
+            {
+              "fieldId": "flow_stage",
+              "fieldValue": "MENU"
+            },
+            {
+              "fieldId": "active_feature",
+              "fieldValue": "NULL"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2832,
+        2320
+      ],
+      "id": "a6718530-659c-4164-8af4-a7437454e20b",
+      "name": "BACK TO MENU",
+      "credentials": {
+        "supabaseApi": {
+          "id": "OuUD997DSs5KO2Hz",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "user_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone_number",
+              "condition": "eq",
+              "keyValue": "={{ $('Define Variables').item.json.phone_num }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "phone_number",
+              "fieldValue": "={{ $('Define Variables').item.json.phone_num }}"
+            },
+            {
+              "fieldId": "flow_stage",
+              "fieldValue": "CONFIRMATION"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        3280,
+        1968
+      ],
+      "id": "71fe00c9-ed1a-4faf-9252-1bf52a51042c",
+      "name": "Flow to confirm",
+      "credentials": {
+        "supabaseApi": {
+          "id": "OuUD997DSs5KO2Hz",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $('Get Quota rows').item.json.image_url }}"
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        2160,
+        2320
+      ],
+      "id": "24f2a11d-bd57-4c94-a59c-4b14b5d08a59",
+      "name": "Download image",
+      "webhookId": "54a2449f-8819-44ba-ba59-db6058adff79",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2384,
+        2320
+      ],
+      "id": "db6388d7-6bff-4f98-a93a-1530edbc92f1",
+      "name": "Get Quota Image Binary1",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "mDhvbL6k7WLp6rk7",
+          "name": "Header Auth account"
+        },
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Check Confirm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "INVOICE HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Mode to IDLE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check User Exists": {
+      "main": [
+        [
+          {
+            "node": "Define Variables",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create New User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create New User": {
+      "main": [
+        [
+          {
+            "node": "Define Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quota Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Error Reset to IDLE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Reset to IDLE": {
+      "main": [
+        [
+          {
+            "node": "Error Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Quota Report": {
+      "main": [
+        [
+          {
+            "node": "ADD USER Session ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get user rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quota Confirmation HTTP request": {
+      "main": [
+        [
+          {
+            "node": "Flow to confirm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finished Quota Report": {
+      "main": [
+        [
+          {
+            "node": "Download image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get user rows": {
+      "main": [
+        [
+          {
+            "node": "Check User Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Quota rows": {
+      "main": [
+        [
+          {
+            "node": "Handle Confirmation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FINALIZED HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "BACK TO MENU",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Quota Data": {
+      "main": [
+        [
+          {
+            "node": "Send message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ADD USER Session ID": {
+      "main": [
+        [
+          {
+            "node": "Send image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message1": {
+      "main": [
+        [
+          {
+            "node": "Quota Confirmation HTTP request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Define Variables": {
+      "main": [
+        [
+          {
+            "node": "Global Interrupts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "State Router": {
+      "main": [
+        [
+          {
+            "node": "MENU HANDLER",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Feature Router",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Confirmation Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MENU HANDLER": {
+      "main": [
+        [
+          {
+            "node": "Feature to QUOTA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Feature to Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fallback Menu Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fallback Menu Handler": {
+      "main": [
+        [
+          {
+            "node": "MAIN MENU",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Image Quota": {
+      "main": [
+        [
+          {
+            "node": "Download media Quota",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Salah input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Image Invoice": {
+      "main": [
+        [
+          {
+            "node": "Download media Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Salah input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download media Quota": {
+      "main": [
+        [
+          {
+            "node": "Processing Image",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Quota Image Binary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download media Invoice": {
+      "main": [
+        [
+          {
+            "node": "Get Invoice Image Binary",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Processing Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Invoice Image Binary": {
+      "main": [
+        []
+      ]
+    },
+    "Get Quota Image Binary": {
+      "main": [
+        [
+          {
+            "node": "POST to Quota Backend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST to Quota Backend": {
+      "main": [
+        [
+          {
+            "node": "Log Quota Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Confirmation": {
+      "main": [
+        [
+          {
+            "node": "Finished Quota Report",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Correct Numbers",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Quota Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Global Interrupts": {
+      "main": [
+        [
+          {
+            "node": "Reset to MENU",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "State Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reset Confirmation MSG": {
+      "main": [
+        [
+          {
+            "node": "MAIN MENU",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MAIN MENU": {
+      "main": [
+        []
+      ]
+    },
+    "Mode to IDLE": {
+      "main": [
+        [
+          {
+            "node": "INVOICE OUTPUT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirmation Router": {
+      "main": [
+        [
+          {
+            "node": "Get Quota rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reset to MENU": {
+      "main": [
+        [
+          {
+            "node": "Reset Confirmation MSG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feature to QUOTA": {
+      "main": [
+        [
+          {
+            "node": "Flow to Feature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feature to Invoice": {
+      "main": [
+        [
+          {
+            "node": "Flow to Feature",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flow to Feature": {
+      "main": [
+        [
+          {
+            "node": "Status Changed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Feature Router": {
+      "main": [
+        [
+          {
+            "node": "Check Image Quota",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Image Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send image": {
+      "main": [
+        [
+          {
+            "node": "Quota Confirmation HTTP request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BACK TO MENU": {
+      "main": [
+        [
+          {
+            "node": "QUOTA SAVED OUTPUT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download image": {
+      "main": [
+        [
+          {
+            "node": "Get Quota Image Binary1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Quota Image Binary1": {
+      "main": [
+        [
+          {
+            "node": "FINALIZED HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "5b28a3a5-4951-4b34-b75f-16446b9c62a9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "efb50018c4ce69cd3b09ea4bf10fc3d2170766b7ba85bdf7f7fd5bcc555b2b38"
+  },
+  "id": "btB0WDcaWgrMpbWh",
+  "tags": []
+}

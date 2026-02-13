@@ -127,9 +127,9 @@ async def submit_report(
             folder_name = outlet_id
             
         clean_folder = re.sub(r'[^a-zA-Z0-9_-]', '', folder_name)
-        storage_path = f"quota/{clean_folder}/{current_year}/Week_{current_week}/{filename}"
+        storage_path = f"Quota/{clean_folder}/{current_year}/Week_{current_week}/{filename}"
         
-        bucket_name = "quota_evidence" 
+        bucket_name = "Screenshots" 
         
         supabase.storage.from_(bucket_name).upload(
             path=storage_path,
