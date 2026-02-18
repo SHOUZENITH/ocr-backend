@@ -1,9 +1,5 @@
 fastapi
 uvicorn
 python-multipart
-numpy
-opencv-python-headless
-pytesseract
-Pillow
-supabase
 requests
+supabase
