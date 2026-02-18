@@ -21,8 +21,8 @@ supabase: Client = None
 if SUPABASE_URL and SUPABASE_KEY:
     try:
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    except Exception as e:
-        print(f"Supabase Init Error: {e}")
+    except Exception:
+        pass
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,6 +32,14 @@ app.add_middleware(
 )
 
 http_session = requests.Session()
+
+def improve_image(img_np):
+    gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+    gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
+    denoised = cv2.fastNlMeansDenoising(gray, h=10)
+    kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
+    sharpened = cv2.filter2D(denoised, -1, kernel)
+    return cv2.adaptiveThreshold(sharpened, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 2)
 
 def calculate_usage_from_text(text):
     clean_text = text.lower().replace(',', '.')
@@ -62,9 +70,8 @@ async def process_document(
             content = await file.read()
             img = Image.open(io.BytesIO(content)).convert("RGB")
             img_np = np.array(img)
-            gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
-            adaptive = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 2)
-            raw_text = pytesseract.image_to_string(adaptive, config="--psm 6")
+            processed_img = improve_image(img_np)
+            raw_text = pytesseract.image_to_string(processed_img, config="--psm 4")
         else:
             return {"error": "No input provided"}
 
@@ -84,7 +91,6 @@ async def process_document(
             matches = []
             for line in lines:
                 try:
-                    # Match endpoint on Hugging Face now returns 'sku'
                     hf_res = http_session.get(f"{HF_API_URL}/match", params={"text": line}, timeout=5)
                     data = hf_res.json()
                     
@@ -92,7 +98,7 @@ async def process_document(
                         matches.append({
                             "original_text": line,
                             "master_name": data.get("matched_product"),
-                            "sku": data.get("sku"), # <--- ADD THIS LINE
+                            "sku": data.get("sku"),
                             "confidence": data.get("confidence")
                         })
                 except: continue
@@ -139,5 +145,4 @@ async def submit_report(
         response = supabase.table("quota_reports").update(data_payload).eq("id", report_id).execute()
         return {"status": "success", "data": response.data}
     except Exception as e:
-        print(f"Error: {str(e)}")
         return {"status": "error", "message": str(e)}
