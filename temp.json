@@ -1,0 +1,37 @@
+{
+  "messaging_product": "whatsapp",
+  "to": "{{ $('Define Variables').item.json.phone_num }}",
+  "type": "interactive",
+  "interactive": {
+    "type": "list",
+    "header": {
+      "type": "text",
+      "text": "Menu Invoice"
+    },
+    "body": {
+      "text": "Silahkan Pilih Bentuk yang ingin dikirim"
+    },
+    "action": {
+      "button": "Pilih",
+      "sections": [
+        {
+          "title": "INVOICE",
+          "rows": [
+            {
+              "id": "INVOICE_IMAGE",
+              "title": "lewat Gambar"
+            },
+            {
+              "id": "INVOICE_TEXT",
+              "title": "Lewat Text"
+            },
+            {
+              "id": "menu_reset",
+              "title": "Kembali Ke Menu"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

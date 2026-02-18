@@ -37,14 +37,11 @@ def calculate_usage_from_text(text):
     clean_text = text.lower().replace(',', '.')
     gb_pattern = r'(\d+(?:\.\d+)?)\s*(?:gb|mb)'
     matches = re.findall(gb_pattern, clean_text)
-    
     values = [float(m) for m in matches if 0.01 < float(m) < 2000]
-    
     if len(values) >= 2:
         return round(max(values) - min(values), 2), round(min(values), 2), "Max-Min Calc"
     elif len(values) == 1:
         return 0.0, values[0], "Single Value"
-    
     return 0.0, 0.0, "No Data"
 
 @app.get("/")
@@ -71,22 +68,24 @@ async def process_document(
         else:
             return {"error": "No input provided"}
 
+        if task_type == "raw_ocr":
+            lines = [l.strip() for l in raw_text.split('\n') if len(l.strip()) > 3]
+            return {"type": "raw_ocr", "lines": lines}
+
         if task_type == "quota":
             used, rem, method = calculate_usage_from_text(raw_text)
             return {"used": used, "remaining": rem, "method": method}
 
         elif task_type == "invoice":
             if not HF_API_URL:
-                return {"error": "HF_API_URL_MISSING", "raw_text": raw_text}
+                return {"error": "HF_API_URL_MISSING"}
             
-            lines = [l.strip() for l in raw_text.split('\n') if len(l.strip()) > 3]
-            
+            lines = [l.strip() for l in re.split('\n|,', raw_text) if len(l.strip()) > 3]
             matches = []
             for line in lines:
                 try:
                     hf_res = http_session.get(HF_API_URL, params={"text": line}, timeout=5)
                     data = hf_res.json()
-                    
                     if data.get("matched_product") != "No Match":
                         matches.append({
                             "original_text": line,
@@ -94,7 +93,6 @@ async def process_document(
                             "confidence": data.get("confidence")
                         })
                 except: continue
-                
             return {"type": "invoice", "matches": matches}
             
     except Exception as e:
@@ -110,7 +108,6 @@ async def submit_report(
     user_corrected_usage: float = Form(...)
 ):
     if not supabase: return {"status": "error", "message": "Database not connected"}
-
     content = await file.read()
     try:
         current_year = time.strftime('%Y')
@@ -119,7 +116,6 @@ async def submit_report(
         folder_name = outlet_name_manual or outlet_id or "Unsorted"
         clean_folder = re.sub(r'[^a-zA-Z0-9_-]', '', folder_name)
         storage_path = f"Quota/{clean_folder}/{current_year}/Week_{current_week}/{filename}"
-        
         bucket_name = "quota_screenshot"
         
         supabase.storage.from_(bucket_name).upload(
@@ -139,7 +135,6 @@ async def submit_report(
         
         response = supabase.table("quota_reports").update(data_payload).eq("id", report_id).execute()
         return {"status": "success", "data": response.data}
-
     except Exception as e:
         print(f"Error: {str(e)}")
         return {"status": "error", "message": str(e)}
