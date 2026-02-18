@@ -113,13 +113,6 @@ async def submit_report(
 
     content = await file.read()
     try:
-        img = Image.open(io.BytesIO(content)).convert("RGB")
-        gray = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2GRAY)
-        adaptive = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 2)
-        text = pytesseract.image_to_string(adaptive, config="--psm 4")
-        
-        audit_used, audit_rem, _ = calculate_usage_from_text(text)
-        
         current_year = time.strftime('%Y')
         current_week = time.strftime('%W')
         filename = f"{int(time.time())}_{file.filename.replace(' ', '_')}"
@@ -140,6 +133,8 @@ async def submit_report(
 
         data_payload = {
             "image_url": final_image_url,
+            "confirmation": True,                 
+            "confirmed_at": "now()"
         }
         
         response = supabase.table("quota_reports").update(data_payload).eq("id", report_id).execute()
