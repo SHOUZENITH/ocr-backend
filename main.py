@@ -31,6 +31,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+http_session = requests.Session()
+
 def calculate_usage_from_text(text):
     clean_text = text.lower().replace(',', '.')
     gb_pattern = r'(\d+(?:\.\d+)?)\s*(?:gb|mb)'
@@ -39,9 +41,7 @@ def calculate_usage_from_text(text):
     values = [float(m) for m in matches if 0.01 < float(m) < 2000]
     
     if len(values) >= 2:
-        used = max(values) - min(values) 
-        remaining = min(values)
-        return round(used, 2), round(remaining, 2), "Max-Min Calc"
+        return round(max(values) - min(values), 2), round(min(values), 2), "Max-Min Calc"
     elif len(values) == 1:
         return 0.0, values[0], "Single Value"
     
@@ -58,7 +58,6 @@ async def process_document(
     task_type: str = Form("quota") 
 ):
     raw_text = ""
-
     try:
         if text_input:
             raw_text = text_input
@@ -70,7 +69,7 @@ async def process_document(
             adaptive = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 2)
             raw_text = pytesseract.image_to_string(adaptive, config="--psm 6")
         else:
-            return {"error": "No text or file provided"}
+            return {"error": "No input provided"}
 
         if task_type == "quota":
             used, rem, method = calculate_usage_from_text(raw_text)
@@ -85,7 +84,7 @@ async def process_document(
             matches = []
             for line in lines:
                 try:
-                    hf_res = requests.get(HF_API_URL, params={"text": line}, timeout=5)
+                    hf_res = http_session.get(HF_API_URL, params={"text": line}, timeout=5)
                     data = hf_res.json()
                     
                     if data.get("matched_product") != "No Match":
@@ -110,11 +109,9 @@ async def submit_report(
     outlet_name_manual: str = Form(None),
     user_corrected_usage: float = Form(...)
 ):
-    if not supabase: 
-        return {"status": "error", "message": "Database not connected"}
+    if not supabase: return {"status": "error", "message": "Database not connected"}
 
     content = await file.read()
-    
     try:
         img = Image.open(io.BytesIO(content)).convert("RGB")
         gray = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2GRAY)
@@ -126,17 +123,11 @@ async def submit_report(
         current_year = time.strftime('%Y')
         current_week = time.strftime('%W')
         filename = f"{int(time.time())}_{file.filename.replace(' ', '_')}"
-        
-        folder_name = "Unsorted"
-        if outlet_name_manual and outlet_name_manual != "TBD":
-            folder_name = outlet_name_manual
-        elif outlet_id:
-            folder_name = outlet_id
-            
+        folder_name = outlet_name_manual or outlet_id or "Unsorted"
         clean_folder = re.sub(r'[^a-zA-Z0-9_-]', '', folder_name)
         storage_path = f"Quota/{clean_folder}/{current_year}/Week_{current_week}/{filename}"
         
-        bucket_name = "quota_screenshot" 
+        bucket_name = "quota_screenshot"
         
         supabase.storage.from_(bucket_name).upload(
             path=storage_path,
