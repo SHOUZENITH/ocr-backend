@@ -1,14 +1,9 @@
 import os
 import time
-import io
 import re
 import requests
-import numpy as np
-import cv2
-import easyocr
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from PIL import Image
 from supabase import create_client, Client
 
 app = FastAPI()
@@ -31,97 +26,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-http_session = requests.Session()
-
-reader = easyocr.Reader(["en"], gpu=False)
-reader = easyocr.Reader(["id"], gpu=False)
-
-def improve_image(img_np):
-    gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
-    gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    denoised = cv2.fastNlMeansDenoising(gray, h=10)
-    kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
-    sharpened = cv2.filter2D(denoised, -1, kernel)
-    return cv2.adaptiveThreshold(sharpened, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 2)
-
-def run_easyocr(img_np):
-    results = reader.readtext(img_np, detail=1, paragraph=False)
-
-    results.sort(key=lambda r: r[0][0][1])
-
-    lines = []
-    for (bbox, text, confidence) in results:
-        if confidence > 0.2 and text.strip():
-            lines.append(text.strip())
-
-    return "\n".join(lines)
-
-def calculate_usage_from_text(text):
-    clean_text = text.lower().replace(',', '.')
-    gb_pattern = r'(\d+(?:\.\d+)?)\s*(?:gb|mb)'
-    matches = re.findall(gb_pattern, clean_text)
-    values = [float(m) for m in matches if 0.01 < float(m) < 2000]
-    if len(values) >= 2:
-        return round(max(values) - min(values), 2), round(min(values), 2), "Max-Min Calc"
-    elif len(values) == 1:
-        return 0.0, values[0], "Single Value"
-    return 0.0, 0.0, "No Data"
-
 @app.get("/")
 def home():
-    return {"status": "active"}
+    return {"status": "active", "mode": "bridge"}
 
 @app.post("/process-document")
 async def process_document(
     file: UploadFile = File(None),
-    text_input: str = Form(None),
-    task_type: str = Form("quota")
+    task_type: str = Form("invoice")
 ):
-    raw_text = ""
     try:
-        if text_input:
-            raw_text = text_input
-        elif file:
-            content = await file.read()
-            img = Image.open(io.BytesIO(content)).convert("RGB")
-            img_np = np.array(img)
+        if not HF_API_URL:
+            return {"error": "HF_API_URL_MISSING"}
 
-            raw_text = run_easyocr(img_np)
+        if not file:
+            return {"error": "No file provided"}
 
-            if len(raw_text.strip()) < 10:
-                processed_img = improve_image(img_np)
-                raw_text = run_easyocr(processed_img)
-        else:
-            return {"error": "No input provided"}
-
-        if task_type == "raw_ocr":
-            lines = [l.strip() for l in raw_text.split('\n') if len(l.strip()) > 3]
-            return {"type": "raw_ocr", "lines": lines}
-
-        if task_type == "quota":
-            used, rem, method = calculate_usage_from_text(raw_text)
-            return {"used": used, "remaining": rem, "method": method}
-
-        elif task_type == "invoice":
-            if not HF_API_URL:
-                return {"error": "HF_API_URL_MISSING"}
-
-            lines = [l.strip() for l in re.split('\n|,', raw_text) if len(l.strip()) > 3]
-            matches = []
-            for line in lines:
-                try:
-                    hf_res = http_session.get(f"{HF_API_URL}/match", params={"text": line}, timeout=5)
-                    data = hf_res.json()
-                    if data.get("matched_product") != "No Match":
-                        matches.append({
-                            "original_text": line,
-                            "master_name": data.get("matched_product"),
-                            "sku": data.get("sku"),
-                            "confidence": data.get("confidence")
-                        })
-                except:
-                    continue
-            return {"type": "invoice", "matches": matches}
+        file_content = await file.read()
+        files = {"file": (file.filename, file_content, file.content_type)}
+        
+        target_url = f"{HF_API_URL}/process-invoice" if task_type == "invoice" else f"{HF_API_URL}/process-quota"
+        
+        hf_res = requests.post(target_url, files=files, timeout=30)
+        return hf_res.json()
 
     except Exception as e:
         return {"error": str(e)}
@@ -129,13 +56,15 @@ async def process_document(
 @app.post("/submit-report")
 async def submit_report(
     file: UploadFile = File(...),
-    report_id: str = Form(...),
+    report_id: str = Form(...),      
     phone_number: str = Form(...),
     outlet_id: str = Form(None),
     outlet_name_manual: str = Form(None),
     user_corrected_usage: float = Form(...)
 ):
-    if not supabase: return {"status": "error", "message": "Database not connected"}
+    if not supabase: 
+        return {"status": "error", "message": "Database not connected"}
+        
     content = await file.read()
     try:
         current_year = time.strftime('%Y')
@@ -145,22 +74,22 @@ async def submit_report(
         clean_folder = re.sub(r'[^a-zA-Z0-9_-]', '', folder_name)
         storage_path = f"Quota/{clean_folder}/{current_year}/Week_{current_week}/{filename}"
         bucket_name = "Screenshots"
-
+        
         supabase.storage.from_(bucket_name).upload(
             path=storage_path,
             file=content,
             file_options={"content-type": file.content_type}
         )
-
+        
         public_url_resp = supabase.storage.from_(bucket_name).get_public_url(storage_path)
         final_image_url = public_url_resp if isinstance(public_url_resp, str) else public_url_resp.get("publicUrl")
 
         data_payload = {
             "image_url": final_image_url,
-            "confirmation": True,
+            "confirmation": True,                 
             "confirmed_at": "now()"
         }
-
+        
         response = supabase.table("quota_reports").update(data_payload).eq("id", report_id).execute()
         return {"status": "success", "data": response.data}
     except Exception as e:
