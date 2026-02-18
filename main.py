@@ -84,12 +84,15 @@ async def process_document(
             matches = []
             for line in lines:
                 try:
-                    hf_res = http_session.get(HF_API_URL, params={"text": line}, timeout=5)
+                    # Match endpoint on Hugging Face now returns 'sku'
+                    hf_res = http_session.get(f"{HF_API_URL}/match", params={"text": line}, timeout=5)
                     data = hf_res.json()
+                    
                     if data.get("matched_product") != "No Match":
                         matches.append({
                             "original_text": line,
                             "master_name": data.get("matched_product"),
+                            "sku": data.get("sku"), # <--- ADD THIS LINE
                             "confidence": data.get("confidence")
                         })
                 except: continue
