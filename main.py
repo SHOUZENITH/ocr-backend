@@ -6,7 +6,7 @@ import requests
 import numpy as np
 import cv2
 import pytesseract
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 from supabase import create_client, Client
@@ -31,15 +31,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def parse_size_to_gb(value_str, unit_str="GB"):
-    try:
-        val = float(value_str.replace(',', '.'))
-        unit = unit_str.upper().strip()
-        if "MB" in unit: return val / 1024.0
-        if "KB" in unit: return val / (1024.0 * 1024.0)
-        return val
-    except: return 0.0
-
 def calculate_usage_from_text(text):
     clean_text = text.lower().replace(',', '.')
     gb_pattern = r'(\d+(?:\.\d+)?)\s*(?:gb|mb)'
@@ -62,16 +53,24 @@ def home():
 
 @app.post("/process-document")
 async def process_document(
-    file: UploadFile = File(...),
-    task_type: str = Form("quota")
+    file: UploadFile = File(None),
+    text_input: str = Form(None),
+    task_type: str = Form("quota") 
 ):
-    content = await file.read()
+    raw_text = ""
+
     try:
-        img = Image.open(io.BytesIO(content)).convert("RGB")
-        img_np = np.array(img)
-        gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
-        adaptive = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 2)
-        raw_text = pytesseract.image_to_string(adaptive, config="--psm 6")
+        if text_input:
+            raw_text = text_input
+        elif file:
+            content = await file.read()
+            img = Image.open(io.BytesIO(content)).convert("RGB")
+            img_np = np.array(img)
+            gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+            adaptive = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 2)
+            raw_text = pytesseract.image_to_string(adaptive, config="--psm 6")
+        else:
+            return {"error": "No text or file provided"}
 
         if task_type == "quota":
             used, rem, method = calculate_usage_from_text(raw_text)
@@ -82,14 +81,21 @@ async def process_document(
                 return {"error": "HF_API_URL_MISSING", "raw_text": raw_text}
             
             lines = [l.strip() for l in raw_text.split('\n') if len(l.strip()) > 3]
+            
             matches = []
             for line in lines:
                 try:
                     hf_res = requests.get(HF_API_URL, params={"text": line}, timeout=5)
                     data = hf_res.json()
+                    
                     if data.get("matched_product") != "No Match":
-                        matches.append(data)
+                        matches.append({
+                            "original_text": line,
+                            "master_name": data.get("matched_product"),
+                            "confidence": data.get("confidence")
+                        })
                 except: continue
+                
             return {"type": "invoice", "matches": matches}
             
     except Exception as e:
@@ -98,6 +104,7 @@ async def process_document(
 @app.post("/submit-report")
 async def submit_report(
     file: UploadFile = File(...),
+    report_id: str = Form(...),      
     phone_number: str = Form(...),
     outlet_id: str = Form(None),
     outlet_name_manual: str = Form(None),
@@ -129,7 +136,7 @@ async def submit_report(
         clean_folder = re.sub(r'[^a-zA-Z0-9_-]', '', folder_name)
         storage_path = f"Quota/{clean_folder}/{current_year}/Week_{current_week}/{filename}"
         
-        bucket_name = "Screenshots" 
+        bucket_name = "quota_screenshot" 
         
         supabase.storage.from_(bucket_name).upload(
             path=storage_path,
@@ -141,21 +148,10 @@ async def submit_report(
         final_image_url = public_url_resp if isinstance(public_url_resp, str) else public_url_resp.get("publicUrl")
 
         data_payload = {
-            "id": None, 
-            "created_at": "now()",
-            "phone_number": phone_number,
             "image_url": final_image_url,
-            "ocr_result_gb": audit_used,          
-            "final_result_gb": user_corrected_usage, 
-            "rem_gb": audit_rem,                  
-            "week": f"{current_year}-W{current_week}",
-            "confirmation": True,                 
-            "confirmed_at": "now()"
         }
         
-        del data_payload["id"] 
-        
-        response = supabase.table("quota_reports").insert(data_payload).execute()
+        response = supabase.table("quota_reports").update(data_payload).eq("id", report_id).execute()
         return {"status": "success", "data": response.data}
 
     except Exception as e:
