@@ -5,7 +5,7 @@ import re
 import requests
 import numpy as np
 import cv2
-import pytesseract
+import easyocr
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
@@ -33,6 +33,9 @@ app.add_middleware(
 
 http_session = requests.Session()
 
+reader = easyocr.Reader(["en"], gpu=False)
+reader = easyocr.Reader(["id"], gpu=False)
+
 def improve_image(img_np):
     gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
     gray = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
@@ -40,6 +43,18 @@ def improve_image(img_np):
     kernel = np.array([[-1,-1,-1], [-1,9,-1], [-1,-1,-1]])
     sharpened = cv2.filter2D(denoised, -1, kernel)
     return cv2.adaptiveThreshold(sharpened, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 31, 2)
+
+def run_easyocr(img_np):
+    results = reader.readtext(img_np, detail=1, paragraph=False)
+
+    results.sort(key=lambda r: r[0][0][1])
+
+    lines = []
+    for (bbox, text, confidence) in results:
+        if confidence > 0.2 and text.strip():
+            lines.append(text.strip())
+
+    return "\n".join(lines)
 
 def calculate_usage_from_text(text):
     clean_text = text.lower().replace(',', '.')
@@ -60,7 +75,7 @@ def home():
 async def process_document(
     file: UploadFile = File(None),
     text_input: str = Form(None),
-    task_type: str = Form("quota") 
+    task_type: str = Form("quota")
 ):
     raw_text = ""
     try:
@@ -70,8 +85,12 @@ async def process_document(
             content = await file.read()
             img = Image.open(io.BytesIO(content)).convert("RGB")
             img_np = np.array(img)
-            processed_img = improve_image(img_np)
-            raw_text = pytesseract.image_to_string(processed_img, config="--psm 4")
+
+            raw_text = run_easyocr(img_np)
+
+            if len(raw_text.strip()) < 10:
+                processed_img = improve_image(img_np)
+                raw_text = run_easyocr(processed_img)
         else:
             return {"error": "No input provided"}
 
@@ -86,14 +105,13 @@ async def process_document(
         elif task_type == "invoice":
             if not HF_API_URL:
                 return {"error": "HF_API_URL_MISSING"}
-            
+
             lines = [l.strip() for l in re.split('\n|,', raw_text) if len(l.strip()) > 3]
             matches = []
             for line in lines:
                 try:
                     hf_res = http_session.get(f"{HF_API_URL}/match", params={"text": line}, timeout=5)
                     data = hf_res.json()
-                    
                     if data.get("matched_product") != "No Match":
                         matches.append({
                             "original_text": line,
@@ -101,16 +119,17 @@ async def process_document(
                             "sku": data.get("sku"),
                             "confidence": data.get("confidence")
                         })
-                except: continue
+                except:
+                    continue
             return {"type": "invoice", "matches": matches}
-            
+
     except Exception as e:
         return {"error": str(e)}
 
 @app.post("/submit-report")
 async def submit_report(
     file: UploadFile = File(...),
-    report_id: str = Form(...),      
+    report_id: str = Form(...),
     phone_number: str = Form(...),
     outlet_id: str = Form(None),
     outlet_name_manual: str = Form(None),
@@ -126,22 +145,22 @@ async def submit_report(
         clean_folder = re.sub(r'[^a-zA-Z0-9_-]', '', folder_name)
         storage_path = f"Quota/{clean_folder}/{current_year}/Week_{current_week}/{filename}"
         bucket_name = "Screenshots"
-        
+
         supabase.storage.from_(bucket_name).upload(
             path=storage_path,
             file=content,
             file_options={"content-type": file.content_type}
         )
-        
+
         public_url_resp = supabase.storage.from_(bucket_name).get_public_url(storage_path)
         final_image_url = public_url_resp if isinstance(public_url_resp, str) else public_url_resp.get("publicUrl")
 
         data_payload = {
             "image_url": final_image_url,
-            "confirmation": True,                 
+            "confirmation": True,
             "confirmed_at": "now()"
         }
-        
+
         response = supabase.table("quota_reports").update(data_payload).eq("id", report_id).execute()
         return {"status": "success", "data": response.data}
     except Exception as e:
