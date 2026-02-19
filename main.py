@@ -45,9 +45,20 @@ async def process_document(
         file_content = await file.read()
         files = {"file": (file.filename, file_content, file.content_type)}
         
-        target_url = f"{HF_API_URL}/process-invoice" if task_type == "invoice" else f"{HF_API_URL}/process-quota"
+        if task_type == "invoice":
+            target_url = f"{HF_API_URL}/process-invoice"
+            
+        elif task_type == "quota":
+            target_url = f"{HF_API_URL}/process-quota"
+            
+        elif task_type == "raw_ocr":
+            target_url = f"{HF_API_URL}/process-ocr"
+            
+        else:
+            target_url = f"{HF_API_URL}/process-ocr"
         
         hf_res = requests.post(target_url, files=files, timeout=30)
+        
         return hf_res.json()
 
     except Exception as e:
@@ -86,11 +97,12 @@ async def submit_report(
 
         data_payload = {
             "image_url": final_image_url,
-            "confirmation": True,                 
+            "confirmation": True,                
             "confirmed_at": "now()"
         }
         
         response = supabase.table("quota_reports").update(data_payload).eq("id", report_id).execute()
         return {"status": "success", "data": response.data}
+        
     except Exception as e:
         return {"status": "error", "message": str(e)}
