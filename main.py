@@ -2,9 +2,11 @@ import os
 import time
 import re
 import requests
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, Body
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import create_client, Client
+from pydantic import BaseModel
+from typing import List
 
 app = FastAPI()
 
@@ -26,9 +28,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Added to support the JSON list from n8n
+class MatchRequest(BaseModel):
+    lines: List[str]
+
 @app.get("/")
 def home():
-    return {"status": "active", "mode": "bridge"}
+    return {"status": "active", "mode": "bridge", "target": HF_API_URL}
 
 @app.post("/process-document")
 async def process_document(
@@ -38,7 +44,6 @@ async def process_document(
     try:
         if not HF_API_URL:
             return {"error": "HF_API_URL_MISSING"}
-
         if not file:
             return {"error": "No file provided"}
 
@@ -47,20 +52,28 @@ async def process_document(
         
         if task_type == "invoice":
             target_url = f"{HF_API_URL}/process-invoice"
-            
         elif task_type == "quota":
             target_url = f"{HF_API_URL}/process-quota"
-            
         elif task_type == "raw_ocr":
-            target_url = f"{HF_API_URL}/process-ocr"
-            
+            target_url = f"{HF_API_URL}/get-raw-ocr"
         else:
-            target_url = f"{HF_API_URL}/process-ocr"
+            target_url = f"{HF_API_URL}/get-raw-ocr"
         
-        hf_res = requests.post(target_url, files=files, timeout=30)
-        
+        hf_res = requests.post(target_url, files=files, timeout=60)
         return hf_res.json()
 
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/match-items")
+async def match_items(data: MatchRequest):
+    try:
+        if not HF_API_URL:
+            return {"error": "HF_API_URL_MISSING"}
+        
+        target_url = f"{HF_API_URL}/match-items"
+        hf_res = requests.post(target_url, json=data.dict(), timeout=30)
+        return hf_res.json()
     except Exception as e:
         return {"error": str(e)}
 
