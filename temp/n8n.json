@@ -1,30 +1,6 @@
 {
-  "name": "BotSupport v.1",
+  "name": "BotSupport v.2",
   "nodes": [
-    {
-      "parameters": {
-        "operation": "send",
-        "phoneNumberId": "979383601928040",
-        "recipientPhoneNumber": "={{ $('Define Variables').item.json.phone_num }}",
-        "textBody": "Silakan kirimkan foto/screenshot Anda sekarang.",
-        "additionalFields": {}
-      },
-      "type": "n8n-nodes-base.whatsApp",
-      "typeVersion": 1.1,
-      "position": [
-        1936,
-        1136
-      ],
-      "id": "ff94f2f9-56df-4d63-93c5-d308743abd15",
-      "name": "Status Changed",
-      "webhookId": "7adb5645-f0c7-4145-9d0b-8135b69b8a24",
-      "credentials": {
-        "whatsAppApi": {
-          "id": "4glZKLps5PTMEGRi",
-          "name": "WhatsApp account"
-        }
-      }
-    },
     {
       "parameters": {
         "conditions": {
@@ -50,13 +26,13 @@
         },
         "options": {}
       },
-      "id": "cd5628a5-a687-4f65-bfa2-2279934de620",
+      "id": "2ab1159f-0cef-41af-9d60-646912a14c0c",
       "name": "Check User Exists",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
         144,
-        1312
+        1776
       ]
     },
     {
@@ -75,13 +51,13 @@
           ]
         }
       },
-      "id": "849c07a0-7723-4211-a966-a41b34ff0dfe",
+      "id": "fd4f9ff9-8db7-4159-b69b-a70dfa818821",
       "name": "Create New User",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
         368,
-        1392
+        1856
       ],
       "credentials": {
         "supabaseApi": {
@@ -92,7 +68,7 @@
     },
     {
       "parameters": {},
-      "id": "4e45ba17-6be2-4153-96d1-315b52e123df",
+      "id": "e1cc1985-9fd4-4fd9-8b71-aaf051458c93",
       "name": "Quota Error Trigger",
       "type": "n8n-nodes-base.errorTrigger",
       "typeVersion": 1,
@@ -118,7 +94,7 @@
           ]
         }
       },
-      "id": "ae7dfeed-1b53-406f-98e7-4dbc588fdc2a",
+      "id": "b0757149-2eaa-4c1a-ba17-54fb8b85c4ff",
       "name": "Error Reset to IDLE",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
@@ -141,7 +117,7 @@
         "textBody": "❌ Maaf, terjadi kesalahan saat memproses gambar Anda. Silakan coba lagi atau pilih menu lain.",
         "additionalFields": {}
       },
-      "id": "0fe0b93c-2105-40f6-bba0-205724479a09",
+      "id": "404ee056-f6f8-464f-9f0d-1b7def2f2146",
       "name": "Error Message",
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
@@ -149,7 +125,7 @@
         144,
         512
       ],
-      "webhookId": "901a9433-e9dd-4823-b56e-0faac129d0be",
+      "webhookId": "f506fc33-1015-4272-9ec9-a060a3a9577b",
       "credentials": {
         "whatsAppApi": {
           "id": "4glZKLps5PTMEGRi",
@@ -197,13 +173,13 @@
           ]
         }
       },
-      "id": "53efea1e-ead4-4699-a523-3a89f5a4773b",
+      "id": "99c8fd0f-9236-48f2-a787-54df7937ba79",
       "name": "Log Quota Report",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
         2384,
-        1792
+        2112
       ],
       "credentials": {
         "supabaseApi": {
@@ -225,11 +201,11 @@
       "typeVersion": 1,
       "position": [
         -304,
-        1312
+        1776
       ],
-      "id": "66789c80-f9b6-4feb-b958-655e9fde5654",
+      "id": "cf377829-5fd1-43c0-acd0-96f187d347c5",
       "name": "WhatsApp Trigger",
-      "webhookId": "bd5bd34b-219c-48a4-afef-ce550ea950e2",
+      "webhookId": "63cbbc4b-d22e-482f-bd52-1e69f89e9547",
       "credentials": {
         "whatsAppTriggerApi": {
           "id": "EI8cUlEX05VkdouN",
@@ -249,11 +225,11 @@
       "typeVersion": 1.1,
       "position": [
         1712,
-        1504
+        1824
       ],
-      "id": "18d9111a-d35f-42b8-8668-dd24ae9107c7",
+      "id": "35865c64-b837-4296-abe1-7e6dee3fac5e",
       "name": "Salah input",
-      "webhookId": "f5df3c27-3920-47e4-8665-5edfd9957c1d",
+      "webhookId": "94c0e084-0e0e-4bc4-8a0e-0397fbf81496",
       "credentials": {
         "whatsAppApi": {
           "id": "4glZKLps5PTMEGRi",
@@ -276,9 +252,9 @@
       "typeVersion": 4.4,
       "position": [
         3056,
-        1792
+        2112
       ],
-      "id": "11c183aa-e1e8-45c2-b1ae-a19b91631ccf",
+      "id": "e3e89c4f-e390-4cf4-b616-b053a98a425d",
       "name": "Quota Confirmation HTTP request",
       "credentials": {
         "httpHeaderAuth": {
@@ -317,9 +293,9 @@
       "typeVersion": 1,
       "position": [
         1936,
-        2176
+        3072
       ],
-      "id": "a2ddc06a-bfe9-4f21-847f-057f9d4bdbb6",
+      "id": "827e9adb-013a-4100-8620-73787b9cb32f",
       "name": "Finished Quota Report",
       "credentials": {
         "supabaseApi": {
@@ -347,9 +323,9 @@
       "typeVersion": 1,
       "position": [
         -80,
-        1312
+        1776
       ],
-      "id": "1a77cb2b-a9a4-498d-945c-a958b72acbe7",
+      "id": "5e0511de-2681-4557-b0dd-603b9ae4975b",
       "name": "Get user rows",
       "alwaysOutputData": true,
       "credentials": {
@@ -378,9 +354,9 @@
       "typeVersion": 1,
       "position": [
         1488,
-        2384
+        3264
       ],
-      "id": "7f02305a-e75f-410a-ac11-16aa4c665146",
+      "id": "36e21728-4b77-46ca-81c0-fba1f036cdf3",
       "name": "Get Quota rows",
       "credentials": {
         "supabaseApi": {
@@ -401,11 +377,11 @@
       "typeVersion": 1.1,
       "position": [
         3056,
-        2176
+        3072
       ],
-      "id": "6e8fb279-f56b-4fb8-9096-d2f832f9c4a3",
+      "id": "e0da31cd-8b69-4efb-a798-a8d27a60ef95",
       "name": "QUOTA SAVED OUTPUT",
-      "webhookId": "2f8095bb-d8d8-4060-b3d3-2c078558bd9d",
+      "webhookId": "f11c36af-37f5-45b4-a607-b2e50478372d",
       "credentials": {
         "whatsAppApi": {
           "id": "4glZKLps5PTMEGRi",
@@ -431,12 +407,12 @@
               "value": "={{ $('Get Quota rows').item.json.final_result_gb }}"
             },
             {
-              "name": "outlet_name_manual",
-              "value": "TBD"
-            },
-            {
               "name": "phone_number",
               "value": "={{ $('Define Variables').item.json.phone_num }}"
+            },
+            {
+              "name": "report_id",
+              "value": "={{ $('Define Variables').item.json.session_id }}"
             }
           ]
         },
@@ -446,9 +422,9 @@
       "typeVersion": 4.4,
       "position": [
         2608,
-        2176
+        3072
       ],
-      "id": "d3daccd5-188e-41b7-b438-b691a50b3cf1",
+      "id": "3451e966-2287-4662-a676-70991148e949",
       "name": "FINALIZED HTTP Request"
     },
     {
@@ -463,11 +439,11 @@
       "typeVersion": 1.1,
       "position": [
         1936,
-        1600
+        1920
       ],
-      "id": "07ba59a6-ea74-4a4a-bfa9-5e8fb5e1612a",
+      "id": "ee30a9bc-52fc-4f1c-8332-a38fefc1b04b",
       "name": "Processing Image",
-      "webhookId": "985ad856-2193-4d9b-8e95-b7453a735aaf",
+      "webhookId": "2a3f31b5-8166-45d5-8cf9-d9a89fd33e9f",
       "credentials": {
         "whatsAppApi": {
           "id": "4glZKLps5PTMEGRi",
@@ -501,9 +477,9 @@
       "typeVersion": 1,
       "position": [
         2608,
-        1792
+        2112
       ],
-      "id": "2bd9b5ae-7ac0-4e17-9193-aeb4ccbf18c3",
+      "id": "f38ff44f-9124-4873-a5c2-e86ec474e74b",
       "name": "ADD USER Session ID",
       "credentials": {
         "supabaseApi": {
@@ -566,9 +542,9 @@
       "typeVersion": 3.4,
       "position": [
         592,
-        1312
+        1776
       ],
-      "id": "fceaa51d-5fd5-48d8-b509-1cf71b014c0c",
+      "id": "0a69ada0-a976-473e-a5b7-a8996ee17cf9",
       "name": "Define Variables"
     },
     {
@@ -651,9 +627,9 @@
       "typeVersion": 3.4,
       "position": [
         1040,
-        1680
+        2192
       ],
-      "id": "5e2d6a9f-ea50-4d47-ab45-e637f220fd51",
+      "id": "c591aca9-c126-4dd9-8100-4f3558332a91",
       "name": "State Router"
     },
     {
@@ -715,9 +691,9 @@
       "typeVersion": 3.4,
       "position": [
         1264,
-        1024
+        1248
       ],
-      "id": "c59bf57c-0058-450b-bdf2-37e54480b746",
+      "id": "142b5a73-7c5e-4d15-8601-492a0a1debba",
       "name": "MENU HANDLER"
     },
     {
@@ -732,11 +708,11 @@
       "typeVersion": 1.1,
       "position": [
         1488,
-        928
+        1152
       ],
-      "id": "3599c842-102a-4007-956c-39bf05a3a52b",
+      "id": "0ef86ac1-39d7-4bb2-838c-f56249a61a35",
       "name": "Fallback Menu Handler",
-      "webhookId": "954001c0-9421-4932-a882-3a0916f0d72e",
+      "webhookId": "70ffe53a-79c6-4799-bd06-1c770d6a6ff4",
       "credentials": {
         "whatsAppApi": {
           "id": "4glZKLps5PTMEGRi",
@@ -773,47 +749,13 @@
       "typeVersion": 2.3,
       "position": [
         1488,
-        1520
+        1840
       ],
-      "id": "b77ede69-c20e-4af6-995f-cdc01f1d21c3",
+      "id": "665dbdd7-19e9-4890-8df7-610c18bff6f0",
       "name": "Check Image Quota"
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "35c11301-8777-49ee-9e8f-a44cc1f6bf6c",
-              "leftValue": "={{ $('Define Variables').item.json.msg_type }}",
-              "rightValue": "image",
-              "operator": {
-                "type": "string",
-                "operation": "equals",
-                "name": "filter.operator.equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        1488,
-        1888
-      ],
-      "id": "e15c88f0-92c4-4d20-83de-50a411a9b3df",
-      "name": "Check Image Invoice"
-    },
-    {
-      "parameters": {
         "resource": "media",
         "operation": "mediaUrlGet",
         "mediaGetId": "={{ $('WhatsApp Trigger').item.json.messages[0].image.id }}"
@@ -822,11 +764,11 @@
       "typeVersion": 1.1,
       "position": [
         1712,
-        1696
+        2016
       ],
-      "id": "bd73c83a-06ef-4e1f-8b0c-200716bb8084",
+      "id": "29138911-cf88-409c-9a31-203bd0de9504",
       "name": "Download media Quota",
-      "webhookId": "ed8cd789-1fd0-4739-8d25-0d2f2ea4177f",
+      "webhookId": "20212648-2e02-46e5-ac89-6abc4b2ca1ef",
       "credentials": {
         "whatsAppApi": {
           "id": "4glZKLps5PTMEGRi",
@@ -844,11 +786,11 @@
       "typeVersion": 1.1,
       "position": [
         1712,
-        1936
+        2368
       ],
-      "id": "c77cf259-5c92-4b71-a1e8-57009ccb03c5",
+      "id": "ab507f1f-4ac8-478d-af5d-13bebe3e8214",
       "name": "Download media Invoice",
-      "webhookId": "ed8cd789-1fd0-4739-8d25-0d2f2ea4177f",
+      "webhookId": "61d68a35-e06e-40a9-a4a6-54cddddfb688",
       "credentials": {
         "whatsAppApi": {
           "id": "4glZKLps5PTMEGRi",
@@ -873,9 +815,9 @@
       "typeVersion": 4.4,
       "position": [
         1936,
-        1984
+        2400
       ],
-      "id": "5f9e82dc-c2b3-4693-b3f8-af5387b3d27b",
+      "id": "9ab968a3-ccd5-40a3-91ce-6aa376e49b65",
       "name": "Get Invoice Image Binary",
       "credentials": {
         "httpHeaderAuth": {
@@ -905,9 +847,9 @@
       "typeVersion": 4.4,
       "position": [
         1936,
-        1792
+        2112
       ],
-      "id": "b633ec8c-c5bf-4af5-955f-fe66127e72f4",
+      "id": "e7d57ac7-0c98-4040-950a-58765ea3257e",
       "name": "Get Quota Image Binary",
       "credentials": {
         "httpHeaderAuth": {
@@ -945,9 +887,9 @@
       "typeVersion": 4.4,
       "position": [
         2160,
-        1792
+        2112
       ],
-      "id": "1d4141ed-625c-4fc9-9bcb-6a21dd1eb4bd",
+      "id": "00956efb-35a8-424e-8a98-4b5d707ae8ba",
       "name": "POST to Quota Backend"
     },
     {
@@ -961,12 +903,12 @@
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
-        2608,
-        2368
+        2832,
+        3264
       ],
-      "id": "774d059e-9477-4444-9c56-b71760d8f9ec",
+      "id": "48b072c0-259c-48d8-a101-622f4e4bee4b",
       "name": "Get Correct Numbers",
-      "webhookId": "815535f8-ffc4-4239-8a98-07ff640c8b99",
+      "webhookId": "affde1f5-fdd1-40b9-9a7e-e44108c0f75c",
       "credentials": {
         "whatsAppApi": {
           "id": "4glZKLps5PTMEGRi",
@@ -1033,9 +975,9 @@
       "typeVersion": 3.4,
       "position": [
         1712,
-        2368
+        3248
       ],
-      "id": "f130b81e-fb0d-4aae-b29b-1fd3de28ce43",
+      "id": "08beeb32-7bb1-4207-a014-df9981435817",
       "name": "Handle Confirmation"
     },
     {
@@ -1076,9 +1018,9 @@
       "typeVersion": 2.3,
       "position": [
         816,
-        1312
+        1776
       ],
-      "id": "23af025b-feab-4e85-8f0b-00d1d2fb7eb1",
+      "id": "e5d36652-a09a-4b2d-b21e-c9da57880517",
       "name": "Global Interrupts"
     },
     {
@@ -1089,15 +1031,15 @@
         "textBody": "Session direset. Silakan ketik menu untuk memulai kembali.",
         "additionalFields": {}
       },
-      "id": "274c7372-31ea-4b44-86e9-2d0544edd166",
+      "id": "5f29a503-8c88-4bc7-9cdb-87d4bcb21845",
       "name": "Reset Confirmation MSG",
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
         1488,
-        736
+        960
       ],
-      "webhookId": "660a71ef-1271-4cf9-978d-1b2a66ca4641",
+      "webhookId": "521c7c6e-3c7d-41e5-be26-379fd8924830",
       "credentials": {
         "whatsAppApi": {
           "id": "4glZKLps5PTMEGRi",
@@ -1120,9 +1062,9 @@
       "typeVersion": 4.4,
       "position": [
         1712,
-        736
+        960
       ],
-      "id": "50578ced-c094-406c-92a6-ed79049593e9",
+      "id": "86b8379a-1e00-4be8-9559-18948bd04022",
       "name": "MAIN MENU",
       "credentials": {
         "httpHeaderAuth": {
@@ -1188,9 +1130,9 @@
       "typeVersion": 3.4,
       "position": [
         1264,
-        1712
+        2224
       ],
-      "id": "6923a7f6-9cdd-436d-9e12-b2ed6da0c589",
+      "id": "be86f266-e459-4741-b967-d644ce9cd1bc",
       "name": "Feature Router"
     },
     {
@@ -1227,9 +1169,9 @@
       "typeVersion": 3.4,
       "position": [
         1264,
-        2384
+        3264
       ],
-      "id": "4a0235b1-03f7-42fe-9cf4-d5633f78b4fc",
+      "id": "f55ef813-b3be-4212-814b-53515702e35b",
       "name": "Confirmation Router"
     },
     {
@@ -1258,13 +1200,13 @@
           ]
         }
       },
-      "id": "487091e2-d4d6-468d-93b4-d8cd27d7a3c2",
+      "id": "223fe617-36b9-4c78-9a9c-1b52c41b720a",
       "name": "Reset to MENU",
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
         1264,
-        736
+        960
       ],
       "credentials": {
         "supabaseApi": {
@@ -1304,9 +1246,9 @@
       "typeVersion": 1,
       "position": [
         1488,
-        1120
+        1344
       ],
-      "id": "8ccabdf4-0a7a-4b3b-b803-a4a659e4c663",
+      "id": "31a96cd6-a7d3-490e-922f-47fbaa8bdfae",
       "name": "Feature to QUOTA",
       "credentials": {
         "supabaseApi": {
@@ -1345,9 +1287,9 @@
       "typeVersion": 1,
       "position": [
         1488,
-        1312
+        1632
       ],
-      "id": "a2be5283-b132-4b8f-9ba4-f999eaab439d",
+      "id": "399a9cfb-35b1-47a3-bb6e-9cdb3b999851",
       "name": "Feature to Invoice",
       "credentials": {
         "supabaseApi": {
@@ -1386,9 +1328,9 @@
       "typeVersion": 1,
       "position": [
         1712,
-        1136
+        1360
       ],
-      "id": "4fb0d70a-1572-4a62-9c1b-39906c8f1bc6",
+      "id": "9fdb9951-1b05-443c-ba87-0c0cd98a51fe",
       "name": "Flow to Feature",
       "credentials": {
         "supabaseApi": {
@@ -1411,11 +1353,11 @@
       "typeVersion": 1.1,
       "position": [
         2832,
-        1792
+        2112
       ],
-      "id": "f6b04ee3-337c-4d9c-977a-e908efb64cf2",
+      "id": "fe775a93-823d-4a81-8c3a-0c7fa97c9554",
       "name": "Send image",
-      "webhookId": "9af92f90-46d9-461e-9012-dea9f293fef8",
+      "webhookId": "0532c034-1b3a-4a1f-bbcc-4efe02c13f88",
       "credentials": {
         "whatsAppApi": {
           "id": "4glZKLps5PTMEGRi",
@@ -1449,6 +1391,10 @@
             {
               "fieldId": "active_feature",
               "fieldValue": "NULL"
+            },
+            {
+              "fieldId": "session_id",
+              "fieldValue": "NULL"
             }
           ]
         }
@@ -1457,9 +1403,9 @@
       "typeVersion": 1,
       "position": [
         2832,
-        2176
+        3072
       ],
-      "id": "a6718530-659c-4164-8af4-a7437454e20b",
+      "id": "0289fd9a-c8f5-4df6-b348-076ce6d783cc",
       "name": "BACK TO MENU",
       "credentials": {
         "supabaseApi": {
@@ -1498,9 +1444,9 @@
       "typeVersion": 1,
       "position": [
         3280,
-        1792
+        2112
       ],
-      "id": "71fe00c9-ed1a-4faf-9252-1bf52a51042c",
+      "id": "af6f7e03-4e59-4c47-b3a8-d3ae0cc2c648",
       "name": "Flow to confirm",
       "credentials": {
         "supabaseApi": {
@@ -1519,11 +1465,11 @@
       "typeVersion": 1.1,
       "position": [
         2160,
-        2176
+        3072
       ],
-      "id": "24f2a11d-bd57-4c94-a59c-4b14b5d08a59",
+      "id": "2a6df424-d523-49bd-aa9d-7823c359d997",
       "name": "Download image",
-      "webhookId": "54a2449f-8819-44ba-ba59-db6058adff79",
+      "webhookId": "e68a4e08-6cd2-4aab-a8ff-540236286431",
       "credentials": {
         "whatsAppApi": {
           "id": "4glZKLps5PTMEGRi",
@@ -1588,9 +1534,9 @@
       "typeVersion": 3.4,
       "position": [
         1936,
-        2640
+        3536
       ],
-      "id": "ecd8684a-f9c5-4e93-822c-6498fb1076a2",
+      "id": "010f7121-ac2a-48a8-b2b1-a700ad2c0b47",
       "name": "Switch"
     },
     {
@@ -1601,118 +1547,21 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Define Variables').item.json.phone_num }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"list\",\n    \"header\": {\n      \"type\": \"text\",\n      \"text\": \"Konfirmasi Laporan\"\n    },\n    \"body\": {\n      \"text\": \"*Laporan Kuota Anda*\\n━━━━━━━━━━━━━━━━━━━━\\nTerpakai: {{ $('Get Quota conf rows').item.json.ocr_result_gb }} GB\\nTersisa: {{ $('Get Quota rows').item.json.rem_gb }} GB\\n━━━━━━━━━━━━━━━━━━━━\\n\\nSilahkan Pilih Bagian Mana Yang mau diganti\"\n    },\n    \"action\": {\n      \"button\": \"Konfirmasi\",\n      \"sections\": [\n        {\n          \"title\": \"Layanan\",\n          \"rows\": [\n            {\n              \"id\": \"quota_used\",\n              \"title\": \"Pemakaian Kuota\"\n            },\n            {\n              \"id\": \"quota_rem\",\n              \"title\": \"Sisa Kuota\"\n            },\n            {\n              \"id\": \"quota_Confirmed\",\n              \"title\": \"Laporan Sudah Benar\"\n            }\n          ]\n        }\n      ]\n    }\n  }\n}\n",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Define Variables').item.json.phone_num }}\",\n  \"type\": \"interactive\",\n  \"interactive\": {\n    \"type\": \"list\",\n    \"header\": {\n      \"type\": \"text\",\n      \"text\": \"Konfirmasi Laporan\"\n    },\n    \"body\": {\n      \"text\": \"*Laporan Kuota Anda*\\n━━━━━━━━━━━━━━━━━━━━\\nTerpakai: {{ $('Get Quota conf rows').item.json.final_result_gb }} GB\\nTersisa: {{ $('Get Quota conf rows').item.json.rem_gb }} GB\\n━━━━━━━━━━━━━━━━━━━━\\n\\nSilahkan Pilih Bagian Mana Yang mau diganti\"\n    },\n    \"action\": {\n      \"button\": \"Konfirmasi\",\n      \"sections\": [\n        {\n          \"title\": \"Layanan\",\n          \"rows\": [\n            {\n              \"id\": \"quota_used\",\n              \"title\": \"Pemakaian Kuota\"\n            },\n            {\n              \"id\": \"quota_rem\",\n              \"title\": \"Sisa Kuota\"\n            },\n            {\n              \"id\": \"quota_Confirmed\",\n              \"title\": \"Laporan Sudah Benar\"\n            }\n          ]\n        }\n      ]\n    }\n  }\n}\n",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        3056,
-        2544
+        3280,
+        3440
       ],
-      "id": "be5def85-a77c-4809-8bd7-c936c4125759",
+      "id": "11dc95da-bf46-4003-a369-a3f50a17bf29",
       "name": "Change Quota Menu",
       "credentials": {
         "httpHeaderAuth": {
           "id": "mDhvbL6k7WLp6rk7",
           "name": "Header Auth account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://ocr-backend-16cj.onrender.com/process-document",
-        "sendBody": true,
-        "contentType": "multipart-form-data",
-        "bodyParameters": {
-          "parameters": [
-            {
-              "parameterType": "formBinaryData",
-              "name": "file",
-              "inputDataFieldName": "data"
-            },
-            {
-              "name": "task_type",
-              "value": "quota"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        2160,
-        1984
-      ],
-      "id": "da89bc3a-c9a4-4404-a271-8f84ab9f846c",
-      "name": "INVOICE HTTP Request"
-    },
-    {
-      "parameters": {
-        "operation": "send",
-        "phoneNumberId": "979383601928040",
-        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
-        "textBody": "=*Produk Terdeteksi*\n━━━━━━━━━━━━━━━━━━━━\n📦 Produk: {{ $node[\"INVOICE HTTP Request\"].json.matches[0].matched_product }}\n🎯 Confidence: {{ $node[\"INVOICE HTTP Request\"].json.matches[0].confidence }}%\n━━━━━━━━━━━━━━━━━━━━\n\nKetik *menu* untuk kembali ke menu utama.",
-        "additionalFields": {
-          "previewUrl": false
-        }
-      },
-      "type": "n8n-nodes-base.whatsApp",
-      "typeVersion": 1.1,
-      "position": [
-        2608,
-        1984
-      ],
-      "id": "d53708f6-8dfc-431b-988b-073fa3229106",
-      "name": "INVOICE OUTPUT",
-      "webhookId": "958b08dc-b309-4ad7-aa6f-5395c5c71b8a",
-      "credentials": {
-        "whatsAppApi": {
-          "id": "4glZKLps5PTMEGRi",
-          "name": "WhatsApp account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "operation": "update",
-        "tableId": "user_sessions",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "phone_number",
-              "condition": "eq",
-              "keyValue": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}"
-            }
-          ]
-        },
-        "fieldsUi": {
-          "fieldValues": [
-            {
-              "fieldId": "phone_number",
-              "fieldValue": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}"
-            },
-            {
-              "fieldId": "current_mode",
-              "fieldValue": "IDLE"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.supabase",
-      "typeVersion": 1,
-      "position": [
-        2384,
-        1984
-      ],
-      "id": "932ae83c-70f4-4db5-89cf-26c549bbdbc8",
-      "name": "Mode to IDLE",
-      "credentials": {
-        "supabaseApi": {
-          "id": "OuUD997DSs5KO2Hz",
-          "name": "Supabase account"
         }
       }
     },
@@ -1728,11 +1577,11 @@
       "typeVersion": 1.1,
       "position": [
         2608,
-        2640
+        3536
       ],
-      "id": "ef8b4bfe-cad4-43cb-aeb9-e59e41f47f08",
+      "id": "5691459c-f30b-4402-a0a4-74433bf0e2cb",
       "name": "Send message",
-      "webhookId": "a0de79d2-4560-4868-90cd-0ed336189738",
+      "webhookId": "33ce9557-17ea-4fbe-a151-42e68a5b1bf5",
       "credentials": {
         "whatsAppApi": {
           "id": "4glZKLps5PTMEGRi",
@@ -1758,7 +1607,7 @@
           "fieldValues": [
             {
               "fieldId": "final_result_gb",
-              "fieldValue": "={{ $('Define Variables').item.json.msg_body }}"
+              "fieldValue": "={{ $json.data.Final_Result }}"
             }
           ]
         }
@@ -1767,10 +1616,11 @@
       "typeVersion": 1,
       "position": [
         2384,
-        2544
+        3440
       ],
-      "id": "d0573cd4-3543-45ec-9445-7f35d7dc4687",
+      "id": "1891f36c-05ec-467b-9e44-2b25947a6a0c",
       "name": "Update Used Quota",
+      "alwaysOutputData": true,
       "credentials": {
         "supabaseApi": {
           "id": "OuUD997DSs5KO2Hz",
@@ -1796,7 +1646,7 @@
           "fieldValues": [
             {
               "fieldId": "rem_gb",
-              "fieldValue": "={{ $('Define Variables').item.json.msg_body }}"
+              "fieldValue": "={{ $json.data.Rem_result }}"
             }
           ]
         }
@@ -1805,9 +1655,9 @@
       "typeVersion": 1,
       "position": [
         2384,
-        2736
+        3632
       ],
-      "id": "11334f99-c413-48fc-ae90-7c0359bbe8b5",
+      "id": "0fd5bc18-f435-47aa-b4d3-a45f573c7f29",
       "name": "Update rem Quota",
       "credentials": {
         "supabaseApi": {
@@ -1834,10 +1684,10 @@
       "type": "n8n-nodes-base.supabase",
       "typeVersion": 1,
       "position": [
-        2832,
-        2544
+        3056,
+        3440
       ],
-      "id": "fde859ae-338f-405a-b05a-1140ffbe015d",
+      "id": "4c0d1851-c7a3-4cd4-b774-48db27c7518c",
       "name": "Get Quota conf rows",
       "credentials": {
         "supabaseApi": {
@@ -1863,9 +1713,9 @@
       "typeVersion": 4.4,
       "position": [
         2384,
-        2176
+        3072
       ],
-      "id": "db6388d7-6bff-4f98-a93a-1530edbc92f1",
+      "id": "e11a9fd2-c40b-4a3f-8491-6e1f82b9c0d3",
       "name": "Get Quota Binary",
       "credentials": {
         "httpHeaderAuth": {
@@ -1881,17 +1731,37 @@
     {
       "parameters": {
         "operation": "sendAndWait",
-        "options": {}
+        "phoneNumberId": "979383601928040",
+        "recipientPhoneNumber": "={{ $('Define Variables').item.json.phone_num }}",
+        "message": "Kuota Terpakai :",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Final_Result",
+              "fieldType": "number",
+              "defaultValue": "={{ $('Get Quota rows').item.json.ocr_result_gb }}"
+            }
+          ]
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 10,
+              "resumeUnit": "minutes"
+            }
+          }
+        }
       },
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
         2160,
-        2544
+        3440
       ],
-      "id": "1e7fd920-48d0-46dd-a48b-96bcbb82e5e0",
+      "id": "2660daad-343d-4d69-b627-a0b3bdff0b7f",
       "name": "Used Quota ask",
-      "webhookId": "69f87031-a629-436b-b34f-8816ec8ad67b",
+      "webhookId": "5fbf1910-7413-42fc-86d0-591cad244e3a",
       "credentials": {
         "whatsAppApi": {
           "id": "4glZKLps5PTMEGRi",
@@ -1902,38 +1772,423 @@
     {
       "parameters": {
         "operation": "sendAndWait",
+        "phoneNumberId": "979383601928040",
+        "recipientPhoneNumber": "={{ $('Define Variables').item.json.phone_num }}",
+        "message": "Kuota Tersisa",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Rem_result",
+              "fieldType": "number",
+              "defaultValue": "={{ $('Get Quota rows').item.json.rem_gb }}"
+            }
+          ]
+        },
         "options": {}
       },
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
-        2144,
-        2864
+        2160,
+        3632
       ],
-      "id": "1f3873b9-0649-4808-8e2b-126239f200a8",
-      "name": "Used Quota ask1",
-      "webhookId": "69f87031-a629-436b-b34f-8816ec8ad67b",
+      "id": "23630eb3-ae9b-4faf-a238-9146554cadb6",
+      "name": "Remaining Quota ask",
+      "webhookId": "d2e10b3c-e64b-4de1-97fb-2ccd17180e26",
       "credentials": {
         "whatsAppApi": {
           "id": "4glZKLps5PTMEGRi",
           "name": "WhatsApp account"
         }
       }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2832,
+        3536
+      ],
+      "id": "b60b0215-26a7-439f-be36-824482f0ac5d",
+      "name": "Wait for database updated",
+      "webhookId": "ddc8e2fe-fb93-4338-8a7f-9db0dfaf3370"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "979383601928040",
+        "recipientPhoneNumber": "={{ $('Define Variables').item.json.phone_num }}",
+        "textBody": "Silakan kirimkan foto/screenshot Anda sekarang.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1712,
+        1552
+      ],
+      "id": "3da00649-e0eb-45e6-83d8-cd7f05b1ddc8",
+      "name": "Wait for input",
+      "webhookId": "82c9bd91-9c09-42a5-a530-b24163eaf6ef",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ocr-backend-16cj.onrender.com/process-document",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "task_type",
+              "value": "raw_ocr"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2160,
+        2400
+      ],
+      "id": "5260f046-b5da-48ef-9c47-739f28dd2074",
+      "name": "API (Image Path)"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "979383601928040",
+        "recipientPhoneNumber": "={{ $('Define Variables').item.json.phone_num }}",
+        "textBody": "=*Konfirmasi Daftar Produk* ━━━━━━━━━━━━━━━━━━━━ \n{{ $json.lines.map((l, i) => (i + 1) + \". \" + l).join('\\n') }} \n━━━━━━━━━━━━━━━━━━━━  \n*Instruksi:* Jika sudah benar, ketik *Lanjut*. Jika ada yang salah, *Copy* pesan di atas, perbaiki, lalu kirim ke sini.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        2384,
+        2496
+      ],
+      "id": "221e3833-f652-43f5-9124-7dc91626ae42",
+      "name": "Show raw list",
+      "webhookId": "da7364c1-9c80-4945-8a1b-01b49824f34c",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "user_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone_number",
+              "condition": "eq",
+              "keyValue": "={{ $('Define Variables').item.json.phone_num }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "phone_number",
+              "fieldValue": "={{ $('Define Variables').item.json.phone_num }}"
+            },
+            {
+              "fieldId": "flow_stage",
+              "fieldValue": "MENU"
+            },
+            {
+              "fieldId": "active_feature",
+              "fieldValue": "NULL"
+            },
+            {
+              "fieldId": "session_id",
+              "fieldValue": "NULL"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2160,
+        2656
+      ],
+      "id": "a569b3e0-e7f1-452c-969b-e556cd003887",
+      "name": "BACK TO MENU1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "OuUD997DSs5KO2Hz",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "user_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone_number",
+              "condition": "eq",
+              "keyValue": "={{ $('Define Variables').item.json.phone_num }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "temp_data",
+              "fieldValue": "={{ $json.lines.join('\\n') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2384,
+        2304
+      ],
+      "id": "2cf5a154-6d8d-453a-84a2-d5e137f8e123",
+      "name": "ADD text list",
+      "credentials": {
+        "supabaseApi": {
+          "id": "OuUD997DSs5KO2Hz",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "user_sessions",
+        "limit": 1,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone_number",
+              "condition": "eq",
+              "keyValue": "={{ $('Define Variables').item.json.phone_num }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1712,
+        2592
+      ],
+      "id": "3e75c52d-278a-4ee1-a445-07aa73c70308",
+      "name": "Get Temp Data",
+      "credentials": {
+        "supabaseApi": {
+          "id": "OuUD997DSs5KO2Hz",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "3b140049-9014-4d97-9c8a-1022387c98f7",
+                    "leftValue": "={{ $('Define Variables').item.json.msg_type }}",
+                    "rightValue": "image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "efe639c2-6a0e-4e91-b095-34a1a8c66a62",
+                    "leftValue": "={{ ( $('Define Variables').item.json.msg_body || '').toLowerCase() }}",
+                    "rightValue": "lanjut",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1488,
+        2576
+      ],
+      "id": "8af24005-07c3-48d2-9958-247d24bf226a",
+      "name": "Invoice Router"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "979383601928040",
+        "recipientPhoneNumber": "={{ $('Define Variables').item.json.phone_num }}",
+        "textBody": "===*Daftar Produk Terdeteksi*\n━━━━━━━━━━━━━━━━━━━━\n{{ $json.matches.map((m, i) => (i + 1) + \". \" + m.master_name + \"\\n   SKU: \" + m.sku + \" (\" + m.confidence + \"%)\").join('\\n') }}\n━━━━━━━━━━━━━━━━━━━━\n\nTotal: {{ $json.matches.length }} produk.\nKetik *menu* untuk kembali.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        2160,
+        2848
+      ],
+      "id": "ab04700c-58c9-4d79-807e-a32f1b246dbd",
+      "name": "Show invoice output",
+      "webhookId": "07a8400e-c3b4-469c-b023-f1c33548da16",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "4glZKLps5PTMEGRi",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ocr-backend-16cj.onrender.com/match-items",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"lines\": $node[\"Get Temp Data\"].json.temp_data.replace(/^\\d+\\.\\s*/gm, '').split('\\n').filter(l => l.trim() !== '')\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1936,
+        2592
+      ],
+      "id": "9c1b97a3-2b18-4599-80ac-baa67ee9e56f",
+      "name": "API (Next Path)"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ocr-backend-16cj.onrender.com/match-items",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"lines\": {{ $json.temp_data.split('\\n').filter(l => l.trim() !== '') }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1936,
+        2880
+      ],
+      "id": "cce9e557-1664-45ad-bf12-e6fa18abe3b3",
+      "name": "API (Text Path)"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "user_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "phone_number",
+              "condition": "eq",
+              "keyValue": "={{ $('Define Variables').item.json.phone_num }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "temp_data",
+              "fieldValue": "NULL"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2384,
+        2848
+      ],
+      "id": "e021d6c6-7e72-4736-9373-ae766d96b8fa",
+      "name": "Empty Temp Data",
+      "credentials": {
+        "supabaseApi": {
+          "id": "OuUD997DSs5KO2Hz",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hiratax-sbert-ocr-backend.hf.space/refresh-data",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -304,
+        736
+      ],
+      "id": "3f10affb-8238-4bba-9272-dca62daf8908",
+      "name": "Spaces Refresh"
     }
   ],
   "pinData": {},
   "connections": {
-    "If": {
-      "main": [
-        [
-          {
-            "node": "Check Confirm",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Check User Exists": {
       "main": [
         [
@@ -2163,24 +2418,6 @@
         ]
       ]
     },
-    "Check Image Invoice": {
-      "main": [
-        [
-          {
-            "node": "Download media Invoice",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Salah input",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Download media Quota": {
       "main": [
         [
@@ -2217,7 +2454,7 @@
       "main": [
         [
           {
-            "node": "INVOICE HTTP Request",
+            "node": "API (Image Path)",
             "type": "main",
             "index": 0
           }
@@ -2334,6 +2571,11 @@
             "node": "Flow to Feature",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Wait for input",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -2345,19 +2587,18 @@
             "node": "Flow to Feature",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Wait for input",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
     },
     "Flow to Feature": {
       "main": [
-        [
-          {
-            "node": "Status Changed",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "Feature Router": {
@@ -2371,7 +2612,7 @@
         ],
         [
           {
-            "node": "Check Image Invoice",
+            "node": "Invoice Router",
             "type": "main",
             "index": 0
           }
@@ -2422,7 +2663,7 @@
         ],
         [
           {
-            "node": "Used Quota ask1",
+            "node": "Remaining Quota ask",
             "type": "main",
             "index": 0
           }
@@ -2434,28 +2675,6 @@
         [
           {
             "node": "Get Quota conf rows",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "INVOICE HTTP Request": {
-      "main": [
-        [
-          {
-            "node": "Mode to IDLE",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Mode to IDLE": {
-      "main": [
-        [
-          {
-            "node": "INVOICE OUTPUT",
             "type": "main",
             "index": 0
           }
@@ -2488,7 +2707,7 @@
       "main": [
         [
           {
-            "node": "Get Quota conf rows",
+            "node": "Wait for database updated",
             "type": "main",
             "index": 0
           }
@@ -2533,7 +2752,7 @@
         ]
       ]
     },
-    "Used Quota ask1": {
+    "Remaining Quota ask": {
       "main": [
         [
           {
@@ -2543,19 +2762,140 @@
           }
         ]
       ]
+    },
+    "Wait for database updated": {
+      "main": [
+        [
+          {
+            "node": "Get Quota conf rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API (Image Path)": {
+      "main": [
+        [
+          {
+            "node": "ADD text list",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Show raw list",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Show raw list": {
+      "main": [
+        []
+      ]
+    },
+    "BACK TO MENU1": {
+      "main": [
+        []
+      ]
+    },
+    "ADD text list": {
+      "main": [
+        []
+      ]
+    },
+    "Get Temp Data": {
+      "main": [
+        [
+          {
+            "node": "API (Next Path)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invoice Router": {
+      "main": [
+        [
+          {
+            "node": "Download media Invoice",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Temp Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "API (Text Path)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API (Next Path)": {
+      "main": [
+        [
+          {
+            "node": "BACK TO MENU1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Show invoice output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API (Text Path)": {
+      "main": [
+        [
+          {
+            "node": "BACK TO MENU1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Show invoice output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Show invoice output": {
+      "main": [
+        [
+          {
+            "node": "Empty Temp Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "302f0882-a255-4e3e-b963-e65c1c05f4f7",
+  "versionId": "cb851fa4-60d5-4890-b827-5d36242e89c8",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "efb50018c4ce69cd3b09ea4bf10fc3d2170766b7ba85bdf7f7fd5bcc555b2b38"
   },
-  "id": "btB0WDcaWgrMpbWh",
+  "id": "otM1E5sjjS74XE1W",
   "tags": []
 }
