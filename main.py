@@ -83,7 +83,7 @@ async def process_document(
 
         if task_type == "quota" and outlet_id and supabase:
             db_res = supabase.table("quota_reports").select(
-                "phash, md5, remaining_quota, expiry_date"
+                "phash, md5, rem_gb, expiry_date"
             ).eq("outlet_id", outlet_id).order("created_at", desc=True).limit(1).execute()
 
             last_report = db_res.data[0] if db_res.data else None
@@ -92,7 +92,7 @@ async def process_document(
                 api_exp = api_data.get("expiry_date")
                 api_quo = api_data.get("remaining_quota")
                 db_exp = last_report.get("expiry_date")
-                db_quo = last_report.get("remaining_quota")
+                db_quo = last_report.get("rem_gb") 
                 distance = calculate_hex_distance(api_data.get("phash"), last_report.get("phash"))
 
                 verdict = "APPROVED (Valid weekly quota update)"
