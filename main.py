@@ -8,14 +8,12 @@ from supabase import create_client, Client
 from pydantic import BaseModel
 from typing import List, Optional
 
-app = FastAPI(title="Gemini OCR Gateway")
+app = FastAPI(title="OCR Gateway")
 
-# --- Configuration ---
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")
 HF_API_URL = os.environ.get("HF_API_URL")
 
-# Initialize Supabase Client
 supabase: Client = None
 if SUPABASE_URL and SUPABASE_KEY:
     try:
@@ -23,7 +21,6 @@ if SUPABASE_URL and SUPABASE_KEY:
     except Exception as e:
         print(f"Supabase connection failed: {e}")
 
-# Enable CORS for frontend/n8n access
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,7 +28,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Shared HTTPX client for efficiency (Connection Pooling)
 async_client = httpx.AsyncClient(timeout=90.0)
 
 class MatchRequest(BaseModel):
@@ -41,7 +37,15 @@ class MatchRequest(BaseModel):
 async def shutdown_event():
     await async_client.aclose()
 
-# --- Gateway Endpoints ---
+def calculate_hex_distance(hash1_hex: str, hash2_hex: str) -> int:
+    if not hash1_hex or not hash2_hex: 
+        return 100
+    try:
+        bin1 = bin(int(hash1_hex, 16))[2:].zfill(64)
+        bin2 = bin(int(hash2_hex, 16))[2:].zfill(64)
+        return sum(c1 != c2 for c1, c2 in zip(bin1, bin2))
+    except ValueError:
+        return 100
 
 @app.get("/")
 def home():
@@ -55,15 +59,12 @@ def home():
 @app.post("/process-document")
 async def process_document(
     file: UploadFile = File(...),
-    task_type: str = Form("invoice")
+    task_type: str = Form("invoice"),
+    outlet_id: Optional[str] = Form(None)
 ):
-    """
-    Bridge: Receives image from n8n and proxies it to Hugging Face Brain.
-    """
     if not HF_API_URL:
         raise HTTPException(status_code=500, detail="HF_API_URL is not configured.")
 
-    # Route mapping to Brain endpoints
     endpoint_map = {
         "invoice": "process-invoice",
         "quota": "process-quota",
@@ -77,17 +78,56 @@ async def process_document(
         file_content = await file.read()
         files = {"file": (file.filename, file_content, file.content_type)}
         
-        # Forwarding the request to HF
         response = await async_client.post(target_url, files=files)
-        return response.json()
+        api_data = response.json()
+
+        if task_type == "quota" and outlet_id and supabase:
+            db_res = supabase.table("quota_reports").select(
+                "phash, md5, remaining_quota, expiry_date"
+            ).eq("outlet_id", outlet_id).order("created_at", desc=True).limit(1).execute()
+
+            last_report = db_res.data[0] if db_res.data else None
+
+            if last_report:
+                api_exp = api_data.get("expiry_date")
+                api_quo = api_data.get("remaining_quota")
+                db_exp = last_report.get("expiry_date")
+                db_quo = last_report.get("remaining_quota")
+                distance = calculate_hex_distance(api_data.get("phash"), last_report.get("phash"))
+
+                verdict = "APPROVED (Valid weekly quota update)"
+                is_valid = True
+
+                if api_data.get("md5") == last_report.get("md5"):
+                    verdict, is_valid = "REJECTED (Layer 1: Exact file duplicate uploaded)", False
+                elif db_exp != "Unknown" and api_exp != "Unknown" and db_exp != api_exp:
+                    verdict, is_valid = "APPROVED (New billing cycle / Quota repurchased)", True
+                elif db_exp == api_exp and api_quo > db_quo:
+                    verdict, is_valid = "REJECTED (Layer 4: Logical Error - Quota increased without renewal)", False
+                elif db_exp == api_exp and api_quo == db_quo:
+                    verdict, is_valid = "REJECTED (Layer 4: Exact same quota numbers. Cropped or stale duplicate detected)", False
+                elif distance <= 8:
+                    verdict, is_valid = "REJECTED (Layer 2: Structural layout is identical. Manual Photoshop detected)", False
+
+                api_data["anti_cheat"] = {
+                    "is_valid": is_valid,
+                    "verdict": verdict,
+                    "visual_distance": distance,
+                    "previous_quota": db_quo,
+                    "previous_expiry": db_exp
+                }
+            else:
+                api_data["anti_cheat"] = {
+                    "is_valid": True,
+                    "verdict": "APPROVED (First time submission)"
+                }
+
+        return api_data
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Brain Communication Error: {str(e)}")
 
 @app.post("/match-items")
 async def match_items(data: MatchRequest):
-    """
-    Bridge: Forwards textual lines to HF for SBERT/Fuzzy matching.
-    """
     if not HF_API_URL:
         raise HTTPException(status_code=500, detail="HF_API_URL is not configured.")
     
@@ -98,8 +138,6 @@ async def match_items(data: MatchRequest):
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Matching Service Error: {str(e)}")
 
-# --- Finalization & Storage ---
-
 @app.post("/submit-report")
 async def submit_report(
     file: UploadFile = File(...),
@@ -109,16 +147,12 @@ async def submit_report(
     outlet_name_manual: Optional[str] = Form(None),
     user_corrected_usage: float = Form(...)
 ):
-    """
-    Gateway: Handles image archival in Supabase Storage and updates the database.
-    """
     if not supabase: 
         return {"status": "error", "message": "Database connection unavailable."}
         
     try:
         content = await file.read()
         
-        # 1. Generate clean path
         current_time = time.localtime()
         year = time.strftime('%Y', current_time)
         week = time.strftime('%W', current_time)
@@ -130,18 +164,15 @@ async def submit_report(
         filename = f"{timestamp}_{file.filename.replace(' ', '_')}"
         storage_path = f"Quota/{clean_folder}/{year}/Week_{week}/{filename}"
         
-        # 2. Upload to Supabase Bucket
         supabase.storage.from_("Screenshots").upload(
             path=storage_path,
             file=content,
             file_options={"content-type": file.content_type}
         )
         
-        # 3. Get Public URL
         url_resp = supabase.storage.from_("Screenshots").get_public_url(storage_path)
         final_url = url_resp if isinstance(url_resp, str) else url_resp.get("publicUrl")
 
-        # 4. Update Database Record
         data_payload = {
             "image_url": final_url,
             "confirmation": True,                
