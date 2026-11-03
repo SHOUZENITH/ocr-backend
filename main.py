@@ -8,7 +8,7 @@ from supabase import create_client, Client
 from pydantic import BaseModel
 from typing import List, Optional
 
-app = FastAPI(title="OCR Gateway v2")
+app = FastAPI(title="OCR Gateway v3")
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY")
@@ -41,13 +41,13 @@ async def shutdown_event():
 def home():
     return {
         "status": "online",
-        "version": "v2",
+        "version": "v3",
         "mode": "bridge",
         "brain_target": HF_API_URL,
         "database_connected": supabase is not None,
         "standardized_variables": {
             "quota_metrics": ["total", "used", "remaining"],
-            "identifiers": ["outlet_code", "user_id", "report_id"]
+            "identifiers": ["outlet_code", "user_id", "report_id", "detected_phone"]
         }
     }
 
@@ -59,8 +59,10 @@ async def process_document(
     outlet_id: Optional[str] = Form(None)  # Backward-compatible alias
 ):
     """
-    v2: Passes document to HF OCR engine, receives standardized variables
-    (total, used, remaining), and validates against previous report in Supabase.
+    v3: Multi-Provider Gateway
+    - Proxies document to HF OCR engine (v3)
+    - Receives standardized variables (total, used, remaining, detected_phone)
+    - Cross-references with historical reports in Supabase for single-card UIs (e.g. Bima+ Tri)
     """
     if not HF_API_URL:
         raise HTTPException(status_code=500, detail="HF_API_URL is not configured.")
@@ -82,7 +84,7 @@ async def process_document(
         response = await async_client.post(target_url, files=files)
         api_data = response.json()
 
-        # Anti-cheat / validation against previous reports in Supabase
+        # Anti-cheat & Historical reconciliation in Supabase
         if task_type == "quota" and effective_outlet and supabase:
             try:
                 db_res = supabase.table("quota_reports").select(
@@ -94,6 +96,16 @@ async def process_document(
                 if last_report:
                     curr_rem = api_data.get("remaining")
                     prev_rem = last_report.get("remaining")
+                    prev_tot = last_report.get("total")
+
+                    # If UI only shows remaining quota (e.g. Bima+) and total was not on screen,
+                    # infer total from previous report if within reasonable range
+                    if api_data.get("used") == 0.0 and prev_tot and curr_rem and prev_tot >= curr_rem:
+                        inferred_used = round(prev_tot - curr_rem, 2)
+                        api_data["total"] = prev_tot
+                        api_data["used"] = inferred_used
+                        api_data["total_quota"] = prev_tot
+                        api_data["used_quota"] = inferred_used
 
                     verdict = "APPROVED (Valid quota report)"
                     is_valid = True
@@ -109,15 +121,16 @@ async def process_document(
                         "verdict": verdict,
                         "outlet_code": effective_outlet,
                         "previous_remaining": prev_rem,
-                        "current_remaining": curr_rem
+                        "current_remaining": curr_rem,
+                        "detected_phone": api_data.get("detected_phone")
                     }
                 else:
                     api_data["anti_cheat"] = {
                         "is_valid": True,
-                        "verdict": "APPROVED (First time submission for this outlet)"
+                        "verdict": "APPROVED (First time submission for this outlet)",
+                        "detected_phone": api_data.get("detected_phone")
                     }
             except Exception as db_err:
-                # If Supabase check fails, don't block the OCR result
                 api_data["anti_cheat"] = {
                     "is_valid": True,
                     "verdict": f"INFO (Database check skipped: {str(db_err)})"
@@ -153,7 +166,7 @@ async def submit_report(
     total: Optional[float] = Form(None)
 ):
     """
-    v2: Stores screenshot in Supabase storage and finalizes quota_reports record.
+    v3: Stores screenshot in Supabase storage and finalizes quota_reports record.
     Supports both new standardized field names and legacy n8n aliases.
     """
     if not supabase: 
